@@ -35,29 +35,59 @@ export default function Navbar() {
         visible ? "translate-y-0" : "-translate-y-full"
       }`}
       style={{
-        background: "rgba(255,255,255,0.6)",
+        // background: "rgba(99, 59, 0, 1)",
         backdropFilter: "blur(16px)",
         WebkitBackdropFilter: "blur(16px)",
-        boxShadow: "0 2px 16px rgba(0,0,0,0.05)",
+        boxShadow: "0 2px 16px rgba(0, 0, 0, 0.27)",
       }}
     >
       <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-3">
+        {/* Logo */}
         <Link href="/">
-          <span className="font-bold text-xl tracking-tight text-gray-900 flex items-center gap-2">
-            <img src="/file.svg" alt="Logo" className="h-8 w-8" />
+          <span className="font-bold text-xl tracking-tight text-green-500 flex items-center gap-2">
+            <img src="/logo.png" alt="Logo" className="h-8 w-8" />
             AccioFocus
           </span>
         </Link>
-        <div className="flex items-center gap-6">
-          {NAV_ITEMS.map((item) => (
+
+        {/* Centered nav items */}
+        <div className="flex-1 flex justify-center">
+          <div className="flex items-center gap-6">
             <Link
-              key={item.label}
-              href={item.href}
-              className="text-gray-800 hover:text-blue-600 font-medium transition-colors"
+              href="/study/solo"
+              className="text-green-600 hover:text-green-900 font-semibold transition-colors"
             >
-              {item.label}
+              Solo Study
             </Link>
-          ))}
+            <Link
+              href="/about"
+              className="text-gray-800 hover:text-green-600 font-medium transition-colors"
+            >
+              About
+            </Link>
+            <Link
+              href="/contact"
+              className="text-gray-800 hover:text-green-600 font-medium transition-colors"
+            >
+              Contact
+            </Link>
+          </div>
+        </div>
+
+        {/* Right side: Login & Signup buttons */}
+        <div className="flex items-center gap-3">
+          <Link
+            href="/(auth)/login"
+            className="px-4 py-2 bg-white border border-green-500 text-green-500 rounded-lg font-semibold shadow hover:bg-green-50 transition"
+          >
+            Login
+          </Link>
+          <Link
+            href="/(auth)/signup"
+            className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold shadow hover:bg-green-700 transition border-2 border-green-500"
+          >
+            Signup
+          </Link>
         </div>
       </div>
     </nav>
