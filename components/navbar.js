@@ -61,13 +61,13 @@ export default function Navbar() {
             </Link>
             <Link
               href="/about"
-              className="text-gray-800 hover:text-green-600 font-medium transition-colors"
+              className="text-gray-500 hover:text-green-800 font-medium transition-colors"
             >
               About
             </Link>
             <Link
               href="/contact"
-              className="text-gray-800 hover:text-green-600 font-medium transition-colors"
+              className="text-gray-500 hover:text-green-800 font-medium transition-colors"
             >
               Contact
             </Link>
