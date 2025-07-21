@@ -55,12 +55,12 @@ export default function SoloStudyPage() {
     const [isMuted, setIsMuted] = useState(false);
     // Ambient sound state: allow multiple sounds and their volumes
     const [ambientVolumes, setAmbientVolumes] = useState({
-        rain: 0.5,
+        rain: 0.0,
         cafe: 0.0,
         forest: 0.0,
         fireplace: 0.0,
         ocean: 0.0,
-        beach: 0.0
+        piano: 0.0
     });
     const [isRunning, setIsRunning] = useState(false);
     const [isBreak, setIsBreak] = useState(false);
@@ -95,14 +95,14 @@ export default function SoloStudyPage() {
         { key: "/dynamicBg/rainycabin.mp4", label: "Rainy Cabin" },
         { key: "/dynamicBg/waterfall.mp4", label: "Waterfall" }
     ];
-    const sounds = ["rain", "cafe", "forest", "fireplace", "ocean", "beach"];
+    const sounds = ["rain", "cafe", "forest", "fireplace", "ocean", "piano"];
     const soundNames = {
         rain: "Rainfall",
         cafe: "Coffee Shop",
         forest: "Forest",
         fireplace: "Fireplace",
         ocean: "Ocean",
-        beach: "Beach"
+        piano: "Piano"
     };
     const soundIcons = {
         rain: "🌧️",
@@ -110,8 +110,55 @@ export default function SoloStudyPage() {
         forest: "🌲",
         fireplace: "🔥",
         ocean: "🌊",
-        beach: "🏖️"
+        piano: "🎹"
     };
+    // Audio refs for each sound
+    const audioRefs = useRef({});
+
+    // Smooth loop for ambient sounds
+    useEffect(() => {
+        sounds.forEach(sound => {
+            const ref = audioRefs.current[sound];
+            if (ref) {
+                ref.loop = false; // We'll handle looping manually
+                ref.volume = ambientVolumes[sound] * (isMuted ? 0 : 1);
+                // Remove previous event
+                ref.onended = null;
+                if (ambientVolumes[sound] > 0 && !isMuted) {
+                    if (ref.paused) {
+                        ref.currentTime = 0;
+                        ref.play();
+                    }
+                    // Add smooth loop handler
+                    ref.onended = () => {
+                        // Fade out
+                        const originalVolume = ambientVolumes[sound] * (isMuted ? 0 : 1);
+                        let fadeSteps = 5;
+                        let fadeOut = setInterval(() => {
+                            if (ref.volume > 0.01) {
+                                ref.volume = Math.max(0, ref.volume - originalVolume / fadeSteps);
+                            } else {
+                                clearInterval(fadeOut);
+                                ref.currentTime = 0;
+                                ref.play().then(() => {
+                                    // Fade in
+                                    let fadeInStep = 0;
+                                    let fadeIn = setInterval(() => {
+                                        fadeInStep++;
+                                        ref.volume = Math.min(originalVolume, (fadeInStep / fadeSteps) * originalVolume);
+                                        if (fadeInStep >= fadeSteps) clearInterval(fadeIn);
+                                    }, 30);
+                                });
+                            }
+                        }, 30);
+                    };
+                } else {
+                    ref.pause();
+                    ref.currentTime = 0;
+                }
+            }
+        });
+    }, [ambientVolumes, isMuted]);
 
     // Real-time clock
     useEffect(() => {
@@ -328,14 +375,18 @@ export default function SoloStudyPage() {
                                 return (
                                     <div
                                         key={sound}
-                                        className={`flex items-center gap-3 p-2 rounded-lg transition-all ${isActive ? "bg-white" : ""
-                                            }`}
+                                        className={`flex items-center gap-3 p-2 rounded-lg transition-all ${isActive ? "bg-white" : ""}`}
                                     >
+                                        {/* Hidden audio element for each sound */}
+                                        <audio
+                                            ref={el => (audioRefs.current[sound] = el)}
+                                            src={`/sounds/${sound}.mp3`}
+                                            preload="auto"
+                                        />
                                         <div className="flex items-center gap-3 w-full">
                                             <div className="text-2xl w-10 h-10 flex items-center justify-center bg-green-500/20 rounded-lg">
                                                 {soundIcons[sound]}
                                             </div>
-
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex justify-between items-center mb-1">
                                                     <span className="text-sm font-medium text-green-800 truncate">
@@ -345,7 +396,6 @@ export default function SoloStudyPage() {
                                                         {Math.round(ambientVolumes[sound] * 100)}%
                                                     </span>
                                                 </div>
-
                                                 <div className="flex items-center gap-2">
                                                     <input
                                                         type="range"
