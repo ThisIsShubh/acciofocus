@@ -7,6 +7,7 @@ import { IoMdRocket } from "react-icons/io";
 export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
+      <Navbar />
       <main className="pt-20 pb-16 flex flex-col items-center text-center px-6">
        {/* Hero section */}
         <section
