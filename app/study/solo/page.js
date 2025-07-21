@@ -71,15 +71,15 @@ export default function SoloStudyPage() {
     const [theme, setTheme] = useState("default");
 
     const backgroundOptions = [
-        { key: "/forest.mp4", label: "Forest Video" },
-        { key: "/2.png", label: "Forest" },
-        { key: "/1.png", label: "Classroom" },
-        { key: "/3.png", label: "Cafe" },
-        { key: "/4.png", label: "Library" },
-        { key: "/5.png", label: "Mountains" },
-        { key: "/6.png", label: "Minimal" },
-        { key: "/7.png", label: "Desert" },
-        { key: "/fireplace.mp4", label: "Fireplace Video" },
+        { key: "/dynamicBg/forest.mp4", label: "Forest Video" },
+        { key: "/staticBg/2.png", label: "Forest" },
+        { key: "/staticBg/1.png", label: "Classroom" },
+        { key: "/staticBg/3.png", label: "Cafe" },
+        { key: "/staticBg/4.png", label: "Library" },
+        { key: "/staticBg/5.png", label: "Mountains" },
+        { key: "/staticBg/6.png", label: "Minimal" },
+        { key: "/staticBg/7.png", label: "Desert" },
+        { key: "/dynamicBg/fireplace.mp4", label: "Fireplace Video" },
     ];
     const sounds = ["rain", "cafe", "forest", "fireplace", "ocean", "beach"];
     const soundNames = {
@@ -187,15 +187,34 @@ export default function SoloStudyPage() {
     };
 
     return (
-        <div
-            className="w-screen h-screen min-h-0 min-w-0 overflow-hidden relative flex items-center justify-center"
-            style={{
-                backgroundImage: `url(${bg})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                backgroundRepeat: "no-repeat",
-            }}
-        >
+        <div className="w-screen h-screen min-h-0 min-w-0 overflow-hidden relative flex items-center justify-center">
+            {/* Background Video or Image */}
+            {bg.endsWith('.mp4') ? (
+                <video
+                    autoPlay
+                    muted
+                    playsInline
+                    className="absolute inset-0 w-full h-full object-cover z-0"
+                    src={bg.startsWith('/dynamicBg/') ? bg : `/dynamicBg/${bg.replace(/^\/+/, '')}`}
+                    onTimeUpdate={e => {
+                        const vid = e.target;
+                        if (vid.currentTime >= 4) {
+                            vid.currentTime = 0;
+                            vid.play();
+                        }
+                    }}
+                />
+            ) : (
+                <div
+                    className="absolute inset-0 w-full h-full z-0"
+                    style={{
+                        backgroundImage: `url(${bg.startsWith('/staticBg/') ? bg : `/staticBg/${bg.replace(/^\/+/, '')}`})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        backgroundRepeat: "no-repeat",
+                    }}
+                />
+            )}
             {/* Dark overlay for better readability */}
             <div className="absolute inset-0 bg-black/20 backdrop-blur-[3px] z-0"></div>
 
