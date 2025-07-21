@@ -6,7 +6,7 @@ import { FaChevronRight, FaPlus, FaTrash, FaCheck, FaEdit, FaTimes, FaHome } fro
 import { FaChevronLeft, FaCog, FaMusic, FaImage, FaPlay, FaPause, FaRedo, FaStepForward, FaVolumeUp, FaVolumeMute } from "react-icons/fa";
 import Link from "next/link";
 
-const DEFAULT_BG = "/2.png";
+const DEFAULT_BG = "gradient";
 
 function getFormattedTime(date) {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -70,16 +70,30 @@ export default function SoloStudyPage() {
     const [progress, setProgress] = useState(100);
     const [theme, setTheme] = useState("default");
 
-    const backgroundOptions = [
+    // Separate static and dynamic backgrounds for menu grouping
+    const staticBgOptions = [
+        { key: "/staticBg/forest.png", label: "Forest" },
+        { key: "/staticBg/cafe.png", label: "Cafe" },
+        { key: "/staticBg/beach.png", label: "Beach" },
+        { key: "/staticBg/city.png", label: "City" },
+        { key: "/staticBg/desk.png", label: "Desk" },
+        { key: "/staticBg/bookshelf.png", label: "Bookshelf" },
+        { key: "/staticBg/rain.png", label: "Rainy Window" },
+        { key: "/staticBg/stars.png", label: "Starry Night" },
+        { key: "/staticBg/cherryblossom.png", label: "Cherry Blossom" },
+        { key: "/staticBg/zengarden.png", label: "Zen Garden" },
+        { key: "/staticBg/autumn.png", label: "Autumn" }
+    ];
+    const dynamicBgOptions = [
         { key: "/dynamicBg/forest.mp4", label: "Forest Video" },
-        { key: "/staticBg/2.png", label: "Forest" },
-        { key: "/staticBg/1.png", label: "Classroom" },
-        { key: "/staticBg/3.png", label: "Cafe" },
-        { key: "/staticBg/4.png", label: "Library" },
-        { key: "/staticBg/5.png", label: "Mountains" },
-        { key: "/staticBg/6.png", label: "Minimal" },
-        { key: "/staticBg/7.png", label: "Desert" },
-        { key: "/dynamicBg/fireplace.mp4", label: "Fireplace Video" },
+        { key: "/dynamicBg/fireplace.mp4", label: "Fireplace" },
+        { key: "/dynamicBg/rainycafe.mp4", label: "Rainy Cafe" },
+        { key: "/dynamicBg/beach.mp4", label: "Beach" },
+        { key: "/dynamicBg/beachsunset.mp4", label: "Beach Sunset" },
+        { key: "/dynamicBg/fairyforest.mp4", label: "Fairy Forest" },
+        { key: "/dynamicBg/ocean.mp4", label: "Ocean" },
+        { key: "/dynamicBg/rainycabin.mp4", label: "Rainy Cabin" },
+        { key: "/dynamicBg/waterfall.mp4", label: "Waterfall" }
     ];
     const sounds = ["rain", "cafe", "forest", "fireplace", "ocean", "beach"];
     const soundNames = {
@@ -189,19 +203,25 @@ export default function SoloStudyPage() {
     return (
         <div className="w-screen h-screen min-h-0 min-w-0 overflow-hidden relative flex items-center justify-center">
             {/* Background Video or Image */}
-            {bg.endsWith('.mp4') ? (
+            {bg === "gradient" ? (
+                <div
+                    className="absolute inset-0 w-full h-full z-0"
+                    style={{
+                        background: "linear-gradient(135deg, #22c55e 0%, #006e28ff 100%)"
+                    }}
+                />
+            ) : bg.endsWith('.mp4') ? (
                 <video
                     autoPlay
+                    loop
                     muted
                     playsInline
                     className="absolute inset-0 w-full h-full object-cover z-0"
-                    src={bg.startsWith('/dynamicBg/') ? bg : `/dynamicBg/${bg.replace(/^\/+/, '')}`}
-                    onTimeUpdate={e => {
+                    src={bg.startsWith('/dynamicBg/') ? bg : `/dynamicBg/${bg.replace(/^\/+/,'')}`}
+                    onLoadedMetadata={e => {
+                        // Ensure autoplay works on all browsers
                         const vid = e.target;
-                        if (vid.currentTime >= 4) {
-                            vid.currentTime = 0;
-                            vid.play();
-                        }
+                        if (vid.paused) vid.play();
                     }}
                 />
             ) : (
@@ -371,16 +391,35 @@ export default function SoloStudyPage() {
                         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                             <FaImage /> Background
                         </h3>
-                        <div className="flex flex-col gap-2">
-                            {backgroundOptions.map(opt => (
-                                <button
-                                    key={opt.key}
-                                    onClick={() => setBg(opt.key)}
-                                    className={`w-full text-left px-4 py-2 rounded-lg transition font-medium ${bg === opt.key ? "bg-green-500/80 text-white" : "bg-white/40 text-green-900 hover:bg-green-100"}`}
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
+                        <div className="flex flex-col gap-6">
+                            <div>
+                                <div className="font-semibold text-green-900 mb-2 text-sm uppercase tracking-wider">Static Images</div>
+                                <div className="flex flex-col gap-2">
+                                    {staticBgOptions.map(opt => (
+                                        <button
+                                            key={opt.key}
+                                            onClick={() => setBg(opt.key)}
+                                            className={`w-full text-left px-4 py-2 rounded-lg transition font-medium ${bg === opt.key ? "bg-green-500/80 text-white" : "bg-white/40 text-green-900 hover:bg-green-100"}`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <div className="font-semibold text-green-900 mb-2 text-sm uppercase tracking-wider">Dynamic Videos</div>
+                                <div className="flex flex-col gap-2">
+                                    {dynamicBgOptions.map(opt => (
+                                        <button
+                                            key={opt.key}
+                                            onClick={() => setBg(opt.key)}
+                                            className={`w-full text-left px-4 py-2 rounded-lg transition font-medium ${bg === opt.key ? "bg-green-500/80 text-white" : "bg-white/40 text-green-900 hover:bg-green-100"}`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
