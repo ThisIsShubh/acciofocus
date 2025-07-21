@@ -65,10 +65,35 @@ export default function SoloStudyPage() {
     const [isRunning, setIsRunning] = useState(false);
     const [isBreak, setIsBreak] = useState(false);
     const [secondsLeft, setSecondsLeft] = useState(25 * 60);
-    const [workDuration, setWorkDuration] = useState(25);
-    const [breakDuration, setBreakDuration] = useState(5);
+    // Active durations used by timer/progress
+    const [activeWorkDuration, setActiveWorkDuration] = useState(25);
+    const [activeBreakDuration, setActiveBreakDuration] = useState(5);
+    // Pending (UI) durations
+    const [pendingWorkDuration, setPendingWorkDuration] = useState(25);
+    const [pendingBreakDuration, setPendingBreakDuration] = useState(5);
+    // Track if settings have changed during an active session
+    const [pendingReset, setPendingReset] = useState(false);
+    const prevWork = useRef(25);
+    const prevBreak = useRef(5);
+    useEffect(() => {
+        if (isRunning) {
+            if (pendingWorkDuration !== prevWork.current || pendingBreakDuration !== prevBreak.current) {
+                setPendingReset(true);
+            }
+        } else {
+            // If not running, apply changes immediately
+            setActiveWorkDuration(pendingWorkDuration);
+            setActiveBreakDuration(pendingBreakDuration);
+            setSecondsLeft(pendingWorkDuration * 60);
+            setProgress(100);
+            setPendingReset(false);
+        }
+        prevWork.current = pendingWorkDuration;
+        prevBreak.current = pendingBreakDuration;
+    }, [pendingWorkDuration, pendingBreakDuration, isRunning]);
     const [progress, setProgress] = useState(100);
     const [theme, setTheme] = useState("default");
+    const [focusUnits, setFocusUnits] = useState(0);
 
     // Separate static and dynamic backgrounds for menu grouping
     const staticBgOptions = [
@@ -114,6 +139,8 @@ export default function SoloStudyPage() {
     };
     // Audio refs for each sound
     const audioRefs = useRef({});
+        // Ref for ting sound
+    const tingRef = useRef(null);
 
     // Smooth loop for ambient sounds
     useEffect(() => {
@@ -171,19 +198,27 @@ export default function SoloStudyPage() {
         if (!isRunning) return;
 
         if (secondsLeft === 0) {
+                        // Play ting sound at end of session
+            if (tingRef.current) {
+                tingRef.current.currentTime = 0;
+                tingRef.current.volume = 1.0;
+                tingRef.current.play();
+            }
+            // If just finished a focus session, increment focusUnits
+            if (!isBreak) setFocusUnits(f => f + 1);
             setIsBreak(!isBreak);
-            setSecondsLeft(isBreak ? workDuration * 60 : breakDuration * 60);
+            setSecondsLeft(isBreak ? activeWorkDuration * 60 : activeBreakDuration * 60);
             return;
         }
 
         const timer = setTimeout(() => {
             setSecondsLeft(s => s - 1);
-            const totalSeconds = (isBreak ? breakDuration : workDuration) * 60;
+            const totalSeconds = (isBreak ? activeBreakDuration : activeWorkDuration) * 60;
             setProgress((secondsLeft / totalSeconds) * 100);
         }, 1000);
 
         return () => clearTimeout(timer);
-    }, [isRunning, secondsLeft, isBreak, workDuration, breakDuration]);
+    }, [isRunning, secondsLeft, isBreak, activeWorkDuration, activeBreakDuration]);
 
     // Format timer
     const min = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
@@ -192,16 +227,20 @@ export default function SoloStudyPage() {
     // Skip to next session
     const skipSession = () => {
         setIsBreak(!isBreak);
-        setSecondsLeft(isBreak ? workDuration * 60 : breakDuration * 60);
+        setSecondsLeft(isBreak ? activeWorkDuration * 60 : activeBreakDuration * 60);
         setProgress(100);
     };
 
-    // Reset timer
+    // Reset timer (apply pending settings)
     const resetTimer = () => {
         setIsRunning(false);
         setIsBreak(false);
-        setSecondsLeft(workDuration * 60);
+        setActiveWorkDuration(pendingWorkDuration);
+        setActiveBreakDuration(pendingBreakDuration);
+        setSecondsLeft(pendingWorkDuration * 60);
         setProgress(100);
+        setFocusUnits(0);
+        setPendingReset(false);
     };
 
     // Get background style based on theme
@@ -285,6 +324,9 @@ export default function SoloStudyPage() {
             {/* Dark overlay for better readability */}
             <div className="absolute inset-0 bg-black/20 backdrop-blur-[3px] z-0"></div>
 
+
+            {/* Ting sound for session end */}
+            <audio ref={tingRef} src="/ting.mp3" preload="auto" />
             {/* Floating Side Menu */}
             <div
                 ref={menuRef}
@@ -330,15 +372,15 @@ export default function SoloStudyPage() {
                             <div>
                                 <div className="flex justify-between mb-1">
                                     <span>Focus Duration</span>
-                                    <span className="font-mono">{workDuration} min</span>
+                                    <span className="font-mono">{pendingWorkDuration} min</span>
                                 </div>
                                 <input
                                     type="range"
                                     min="5"
                                     max="60"
                                     step="5"
-                                    value={workDuration}
-                                    onChange={e => setWorkDuration(Number(e.target.value))}
+                                    value={pendingWorkDuration}
+                                    onChange={e => setPendingWorkDuration(Number(e.target.value))}
                                     className="w-full accent-green-500"
                                 />
                             </div>
@@ -346,18 +388,29 @@ export default function SoloStudyPage() {
                             <div>
                                 <div className="flex justify-between mb-1">
                                     <span>Break Duration</span>
-                                    <span className="font-mono">{breakDuration} min</span>
+                                    <span className="font-mono">{pendingBreakDuration} min</span>
                                 </div>
                                 <input
                                     type="range"
                                     min="1"
                                     max="15"
-                                    value={breakDuration}
-                                    onChange={e => setBreakDuration(Number(e.target.value))}
+                                    value={pendingBreakDuration}
+                                    onChange={e => setPendingBreakDuration(Number(e.target.value))}
                                     className="w-full accent-amber-500"
                                 />
                             </div>
                         </div>
+                        {pendingReset && (
+                            <div className="mt-4 flex flex-col items-center gap-2">
+                                <span className="text-xs text-red-600 font-semibold">Settings changed. Reset required to apply.</span>
+                                <button
+                                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold text-xs"
+                                    onClick={resetTimer}
+                                >
+                                    Reset Timer
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     {/* Ambient Sound Mixer */}
@@ -457,7 +510,7 @@ export default function SoloStudyPage() {
                                 </div>
                             </div>
                             <div>
-                                <div className="font-semibold text-green-900 mb-2 text-sm uppercase tracking-wider">Dynamic Videos</div>
+                                <div className="font-semibold text-green-900 mb-2 text-sm uppercase tracking-wider">Live Videos</div>
                                 <div className="flex flex-col gap-2">
                                     {dynamicBgOptions.map(opt => (
                                         <button
@@ -490,7 +543,7 @@ export default function SoloStudyPage() {
             {/* Left Menu Toggle Button */}
             {!menuOpen && (
                 <button
-                    className="fixed top-4 left-4 z-40 bg-green-500 hover:bg-green-600 text-white rounded-full p-3 shadow-lg flex items-center"
+                    className="fixed top-4 left-4 z-40 bg-green-500/20 hover:bg-green-600 text-white rounded-full p-3 shadow-lg flex items-center"
                     onClick={() => setMenuOpen(true)}
                 >
                     <FaCog className="text-xl" />
@@ -682,11 +735,15 @@ export default function SoloStudyPage() {
                     <div className="flex items-center gap-6 bg-black/30 backdrop-blur-sm px-6 py-3 rounded-full">
                         <div className="flex items-center gap-2">
                             <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                            <span>Focus: {workDuration} min</span>
+                            <span>Focus: {activeWorkDuration} min</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-                            <span>Break: {breakDuration} min</span>
+                            <span>Break: {activeBreakDuration} min</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-green-400 font-mono text-base">🍅 {focusUnits}</span>
+                            <span className="text-xs text-green-200">Focus Units</span>
                         </div>
                         <div className="flex items-center gap-2">
                             {(() => {
