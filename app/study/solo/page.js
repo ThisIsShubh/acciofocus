@@ -1,13 +1,43 @@
-// app/study/solo/page.js
+
+// =======================
+// Solo Study Page
+// =======================
 "use client";
 
+
+// =======================
+// Helpers
+// =======================
+// Helper to extract YouTube video ID from URL
+// (Must be placed before any imports, JSX, or export in a Next.js client component file)
+function getYoutubeId(url) {
+    if (!url) return "";
+    // Accepts full, short, and embed links
+    const regex = /(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([\w-]{11})/;
+    const match = url.match(regex);
+    return match ? match[1] : "";
+}
+
+
+
+// =======================
+// Imports
+// =======================
 import React, { useState, useEffect, useRef } from "react";
 import { FaChevronRight, FaPlus, FaTrash, FaCheck, FaEdit, FaTimes, FaHome } from "react-icons/fa";
 import { FaChevronLeft, FaCog, FaMusic, FaImage, FaPlay, FaPause, FaRedo, FaStepForward, FaVolumeUp, FaVolumeMute } from "react-icons/fa";
 import Link from "next/link";
 
+
+// =======================
+// Constants
+// =======================
 const DEFAULT_BG = "gradient";
 
+
+// =======================
+// Formatting Helpers
+// =======================
 function getFormattedTime(date) {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
@@ -15,7 +45,16 @@ function getFormattedDate(date) {
     return date.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
 }
 
+
+// =======================
+// Main Component
+// =======================
 export default function SoloStudyPage() {
+    // =======================
+    // State & Refs
+    // =======================
+    // Ref for fullscreen container
+    const fullscreenRef = useRef(null);
     // Right menu state
     const rightMenuRef = useRef(null);
     const [rightMenuOpen, setRightMenuOpen] = useState(false);
@@ -24,6 +63,9 @@ export default function SoloStudyPage() {
     const [editIdx, setEditIdx] = useState(null);
     const [editText, setEditText] = useState("");
 
+    // =======================
+    // Controllers: Menu Open/Close
+    // =======================
     // Close right menu on click outside
     useEffect(() => {
         if (!rightMenuOpen) return;
@@ -50,7 +92,14 @@ export default function SoloStudyPage() {
         document.addEventListener('mousedown', handleClick);
         return () => document.removeEventListener('mousedown', handleClick);
     }, [menuOpen]);
+    // =======================
+    // State: Background, YouTube, Sound, Timer, Theme, Focus Units
+    // =======================
     const [bg, setBg] = useState(DEFAULT_BG);
+    const [youtubeUrl, setYoutubeUrl] = useState("");
+    const [youtubeBg, setYoutubeBg] = useState("");
+    const [youtubeVolume, setYoutubeVolume] = useState(100); // 0-100
+    const youtubeIframeRef = useRef(null);
     const [now, setNow] = useState(new Date());
     const [isMuted, setIsMuted] = useState(false);
     // Ambient sound state: allow multiple sounds and their volumes
@@ -75,6 +124,9 @@ export default function SoloStudyPage() {
     const [pendingReset, setPendingReset] = useState(false);
     const prevWork = useRef(25);
     const prevBreak = useRef(5);
+    // =======================
+    // Controllers: Pomodoro Settings Change
+    // =======================
     useEffect(() => {
         if (isRunning) {
             if (pendingWorkDuration !== prevWork.current || pendingBreakDuration !== prevBreak.current) {
@@ -95,6 +147,9 @@ export default function SoloStudyPage() {
     const [theme, setTheme] = useState("default");
     const [focusUnits, setFocusUnits] = useState(0);
 
+    // =======================
+    // Constants: Background & Sound Options
+    // =======================
     // Separate static and dynamic backgrounds for menu grouping
     const staticBgOptions = [
         { key: "/staticBg/forest.png", label: "Forest" },
@@ -139,9 +194,12 @@ export default function SoloStudyPage() {
     };
     // Audio refs for each sound
     const audioRefs = useRef({});
-        // Ref for ting sound
+    // Ref for ting sound
     const tingRef = useRef(null);
 
+    // =======================
+    // Controllers: Ambient Sound Smooth Loop
+    // =======================
     // Smooth loop for ambient sounds
     useEffect(() => {
         sounds.forEach(sound => {
@@ -187,12 +245,18 @@ export default function SoloStudyPage() {
         });
     }, [ambientVolumes, isMuted]);
 
+    // =======================
+    // Controllers: Real-time Clock
+    // =======================
     // Real-time clock
     useEffect(() => {
         const interval = setInterval(() => setNow(new Date()), 1000);
         return () => clearInterval(interval);
     }, []);
 
+    // =======================
+    // Controllers: Pomodoro Timer Logic
+    // =======================
     // Pomodoro timer logic
     useEffect(() => {
         if (!isRunning) return;
@@ -220,10 +284,16 @@ export default function SoloStudyPage() {
         return () => clearTimeout(timer);
     }, [isRunning, secondsLeft, isBreak, activeWorkDuration, activeBreakDuration]);
 
+    // =======================
+    // UI: Timer Formatting
+    // =======================
     // Format timer
     const min = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
     const sec = String(secondsLeft % 60).padStart(2, "0");
 
+    // =======================
+    // Controllers: Timer Controls
+    // =======================
     // Skip to next session
     const skipSession = () => {
         setIsBreak(!isBreak);
@@ -243,6 +313,9 @@ export default function SoloStudyPage() {
         setPendingReset(false);
     };
 
+    // =======================
+    // UI: Theme Style Helper
+    // =======================
     // Get background style based on theme
     const getThemeStyle = () => {
         switch (theme) {
@@ -259,6 +332,9 @@ export default function SoloStudyPage() {
         }
     };
 
+    // =======================
+    // Controllers: Task Handlers
+    // =======================
     // Task handlers
     const handleAddTask = () => {
         if (newTask.trim()) {
@@ -286,10 +362,71 @@ export default function SoloStudyPage() {
         setEditText("");
     };
 
+    // =======================
+    // Controllers: YouTube Volume Control & Mute
+    // =======================
+    // Store previous YouTube volume for mute toggle
+    const prevYoutubeVolume = useRef(100);
+    // Set YouTube volume via postMessage to iframe
+    useEffect(() => {
+        if (!youtubeBg || !youtubeIframeRef.current) return;
+        // If muted, set volume to 0, else set to youtubeVolume
+        const vol = isMuted ? 0 : youtubeVolume;
+        const setVolume = () => {
+            youtubeIframeRef.current.contentWindow.postMessage(
+                JSON.stringify({
+                    event: 'command',
+                    func: 'setVolume',
+                    args: [vol]
+                }),
+                '*'
+            );
+        };
+        setVolume();
+        const t = setTimeout(setVolume, 800);
+        return () => clearTimeout(t);
+    }, [youtubeBg, youtubeVolume, isMuted]);
+
+    // =======================
+    // Controllers: Fullscreen Toggle
+    // =======================
+    // Fullscreen toggle on 'F' key
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'f' || e.key === 'F') {
+                const el = fullscreenRef.current;
+                if (!el) return;
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                } else {
+                    el.requestFullscreen();
+                }
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    // =======================
+    // UI: Render
+    // =======================
     return (
-        <div className="w-screen h-screen min-h-0 min-w-0 overflow-hidden relative flex items-center justify-center">
+        <div ref={fullscreenRef} className="w-screen h-screen min-h-0 min-w-0 overflow-hidden relative flex items-center justify-center">
             {/* Background Video or Image */}
-            {bg === "gradient" ? (
+            {youtubeBg ? (
+                <div className="absolute inset-0 w-full h-full z-0">
+                    <iframe
+                        ref={youtubeIframeRef}
+                        src={`https://www.youtube.com/embed/${getYoutubeId(youtubeBg)}?autoplay=1&controls=0&loop=1&playlist=${getYoutubeId(youtubeBg)}&modestbranding=1&rel=0&enablejsapi=1`}
+                        allow="autoplay; fullscreen"
+                        allowFullScreen
+                        frameBorder="0"
+                        className="w-full h-full absolute inset-0 object-cover"
+                        style={{ pointerEvents: 'none' }}
+                        title="YouTube Background"
+                    />
+                </div>
+            ) : bg === "gradient" ? (
                 <div
                     className="absolute inset-0 w-full h-full z-0"
                     style={{
@@ -501,8 +638,8 @@ export default function SoloStudyPage() {
                                     {staticBgOptions.map(opt => (
                                         <button
                                             key={opt.key}
-                                            onClick={() => setBg(opt.key)}
-                                            className={`w-full text-left px-4 py-2 rounded-lg transition font-medium ${bg === opt.key ? "bg-green-500/80 text-white" : "bg-white/40 text-green-900 hover:bg-green-100"}`}
+                                            onClick={() => { setBg(opt.key); setYoutubeBg(""); }}
+                                            className={`w-full text-left px-4 py-2 rounded-lg transition font-medium ${bg === opt.key && !youtubeBg ? "bg-green-500/80 text-white" : "bg-white/40 text-green-900 hover:bg-green-100"}`}
                                         >
                                             {opt.label}
                                         </button>
@@ -515,16 +652,68 @@ export default function SoloStudyPage() {
                                     {dynamicBgOptions.map(opt => (
                                         <button
                                             key={opt.key}
-                                            onClick={() => setBg(opt.key)}
-                                            className={`w-full text-left px-4 py-2 rounded-lg transition font-medium ${bg === opt.key ? "bg-green-500/80 text-white" : "bg-white/40 text-green-900 hover:bg-green-100"}`}
+                                            onClick={() => { setBg(opt.key); setYoutubeBg(""); }}
+                                            className={`w-full text-left px-4 py-2 rounded-lg transition font-medium ${bg === opt.key && !youtubeBg ? "bg-green-500/80 text-white" : "bg-white/40 text-green-900 hover:bg-green-100"}`}
                                         >
                                             {opt.label}
                                         </button>
                                     ))}
                                 </div>
                             </div>
+                            <div>
+                                <div className="font-semibold text-green-900 mb-2 text-sm uppercase tracking-wider">YouTube Video</div>
+                                <div className="flex flex-col gap-2 items-center mb-2">
+                                    <p className="text-sm text-gray-600">Some videos can be restricted by the creator.</p>
+                                    <input
+                                        type="text"
+                                        placeholder="Paste YouTube link..."
+                                        value={youtubeUrl}
+                                        onChange={e => setYoutubeUrl(e.target.value)}
+                                        className="flex-1 px-3 py-2 rounded-lg border border-green-300 focus:outline-none focus:ring-2 focus:ring-green-400"
+                                    />
+                                    <div className="flex gap-2 w-full">
+                                        <button
+                                            className="w-full bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg font-semibold text-xs"
+                                            onClick={() => {
+                                                if (getYoutubeId(youtubeUrl)) {
+                                                    setYoutubeBg(youtubeUrl);
+                                                }
+                                            }}
+                                        >
+                                            Set
+                                        </button>
+                                        {youtubeBg && (
+                                            <button
+                                                className="w-full bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg font-semibold text-xs"
+                                                onClick={() => setYoutubeBg("")}
+                                            >
+                                                Clear
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                {youtubeBg && !getYoutubeId(youtubeBg) && (
+                                    <div className="text-xs text-red-600 mt-1">Invalid YouTube link</div>
+                                )}
+                                {/* YouTube Volume Slider in Settings */}
+                                {youtubeBg && getYoutubeId(youtubeBg) && (
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <span className="text-green-900 text-xs">YouTube Volume</span>
+                                        <input
+                                            type="range"
+                                            min={0}
+                                            max={100}
+                                            value={youtubeVolume}
+                                            onChange={e => setYoutubeVolume(Number(e.target.value))}
+                                            className="accent-green-500 w-32"
+                                        />
+                                        <span className="text-green-900 text-xs w-8 text-right">{youtubeVolume}</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
+
 
 
 
@@ -643,7 +832,22 @@ export default function SoloStudyPage() {
                 <button
                     className="bg-white/10 hover:bg-white/20 text-white/40 rounded-full p-3 shadow-lg backdrop-blur-sm flex items-center justify-center"
                     style={{ width: 48, height: 48 }}
-                    onClick={() => setIsMuted(!isMuted)}
+                    onClick={() => {
+                        // Mute/unmute all audio including YouTube
+                        setIsMuted(muted => {
+                            // If muting, store current YouTube volume
+                            if (!muted) prevYoutubeVolume.current = youtubeVolume;
+                            // If unmuting, restore previous YouTube volume
+                            if (muted && youtubeVolume === 0 && prevYoutubeVolume.current > 0) {
+                                setYoutubeVolume(prevYoutubeVolume.current);
+                            }
+                            return !muted;
+                        });
+                        // If muting, set YouTube volume to 0
+                        if (!isMuted) setYoutubeVolume(0);
+                        // If unmuting, restore previous YouTube volume
+                        if (isMuted && prevYoutubeVolume.current > 0) setYoutubeVolume(prevYoutubeVolume.current);
+                    }}
                 >
                     {isMuted ? <FaVolumeMute className="w-6 h-6" /> : <FaVolumeUp className="w-6 h-6" />}
                 </button>
