@@ -1,343 +1,106 @@
 
-// =======================
-// Solo Study Page
-// =======================
 "use client";
 
-
-// =======================
-// Helpers
-// =======================
-// Helper to extract YouTube video ID from URL
-// (Must be placed before any imports, JSX, or export in a Next.js client component file)
-function getYoutubeId(url) {
-    if (!url) return "";
-    // Accepts full, short, and embed links
-    const regex = /(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([\w-]{11})/;
-    const match = url.match(regex);
-    return match ? match[1] : "";
-}
-
-
-
-// =======================
-// Imports
-// =======================
-import React, { useState, useEffect, useRef } from "react";
-import { FaChevronRight, FaPlus, FaTrash, FaCheck, FaEdit, FaTimes, FaHome, FaClock, FaListUl } from "react-icons/fa";
-import { FaChevronLeft, FaCog, FaMusic, FaImage, FaPlay, FaPause, FaRedo, FaStepForward, FaVolumeUp, FaVolumeMute, FaYoutube } from "react-icons/fa";
+import React, { useRef, useState, useEffect } from "react";
 import Link from "next/link";
+import { FaChevronLeft, FaClock, FaImage, FaListUl, FaMusic, FaPause, FaPlay, FaPlus, FaRedo, FaStepForward, FaTimes, FaTrash, FaCheck, FaEdit, FaHome, FaVolumeUp, FaVolumeMute, FaYoutube } from "react-icons/fa";
+import { getFormattedTime, getFormattedDate } from "../../../helpers/format";
+import { getYoutubeId } from "../../../helpers/youtube";
+import { usePomodoro } from "../../../controllers/usePomodoro";
+import { useMenu, useRightMenu } from "../../../controllers/useMenu";
+import { useBackground } from "../../../controllers/useBackground";
+import { useYoutube } from "../../../controllers/useYoutube";
+import { useAmbientSound } from "../../../controllers/useAmbientSound";
+import Timer from "../../../components/Timer";
+import TaskList from "../../../components/TaskList";
+import Background from "../../../components/Background";
+import AmbientAudio from "../../../components/AmbientAudio";
+import TingAudio from "../../../components/TingAudio";
 
+// Constants for backgrounds and sounds
+const staticBgOptions = [
+    { key: "/staticBg/forest.png", label: "Forest" },
+    { key: "/staticBg/cafe.png", label: "Cafe" },
+    { key: "/staticBg/beach.png", label: "Beach" },
+    { key: "/staticBg/city.png", label: "City" },
+    { key: "/staticBg/desk.png", label: "Desk" },
+    { key: "/staticBg/bookshelf.png", label: "Bookshelf" },
+    { key: "/staticBg/rain.png", label: "Rainy Window" },
+    { key: "/staticBg/stars.png", label: "Starry Night" },
+    { key: "/staticBg/cherryblossom.png", label: "Cherry Blossom" },
+    { key: "/staticBg/zengarden.png", label: "Zen Garden" },
+    { key: "/staticBg/autumn.png", label: "Autumn" }
+];
+const dynamicBgOptions = [
+    { key: "/dynamicBg/forest.mp4", label: "Forest Video" },
+    { key: "/dynamicBg/fireplace.mp4", label: "Fireplace" },
+    { key: "/dynamicBg/rainycafe.mp4", label: "Rainy Cafe" },
+    { key: "/dynamicBg/beach.mp4", label: "Beach" },
+    { key: "/dynamicBg/beachsunset.mp4", label: "Beach Sunset" },
+    { key: "/dynamicBg/fairyforest.mp4", label: "Fairy Forest" },
+    { key: "/dynamicBg/ocean.mp4", label: "Ocean" },
+    { key: "/dynamicBg/rainycabin.mp4", label: "Rainy Cabin" },
+    { key: "/dynamicBg/waterfall.mp4", label: "Waterfall" }
+];
+const sounds = ["rain", "cafe", "forest", "fireplace", "ocean", "piano"];
+const soundNames = {
+    rain: "Rainfall",
+    cafe: "Coffee Shop",
+    forest: "Forest",
+    fireplace: "Fireplace",
+    ocean: "Ocean",
+    piano: "Piano"
+};
+const soundIcons = {
+    rain: "🌧️",
+    cafe: "☕",
+    forest: "🌲",
+    fireplace: "🔥",
+    ocean: "🌊",
+    piano: "🎹"
+};
 
-// =======================
-// Constants
-// =======================
-const DEFAULT_BG = "gradient";
-
-
-// =======================
-// Formatting Helpers
-// =======================
-function getFormattedTime(date) {
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
-function getFormattedDate(date) {
-    return date.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
-}
-
-
-// =======================
-// Main Component
-// =======================
 export default function SoloStudyPage() {
-    // Capsule selector state for backgrounds
-    const [bgTab, setBgTab] = useState('static');
-    // =======================
-    // State & Refs
-    // =======================
-    // Ref for fullscreen container
+    // Controllers/hooks
     const fullscreenRef = useRef(null);
-    // Right menu state
-    const rightMenuRef = useRef(null);
-    const [rightMenuOpen, setRightMenuOpen] = useState(false);
+    const tingRef = useRef(null);
+    const {
+        menuOpen, setMenuOpen, menuRef
+    } = useMenu();
+    const {
+        rightMenuOpen, setRightMenuOpen, rightMenuRef
+    } = useRightMenu();
+    const {
+        bg, setBg, bgTab, setBgTab
+    } = useBackground();
+    const [now, setNow] = useState(new Date());
+    const [theme, setTheme] = useState("default");
+    const [isMuted, setIsMuted] = useState(false);
+    const {
+        youtubeUrl, setYoutubeUrl, youtubeBg, setYoutubeBg, youtubeVolume, setYoutubeVolume, youtubeIframeRef, prevYoutubeVolume
+    } = useYoutube(isMuted);
+    const {
+        ambientVolumes, setAmbientVolumes, audioRefs
+    } = useAmbientSound(isMuted);
+    const {
+        isRunning, setIsRunning, isBreak, setIsBreak, secondsLeft, setSecondsLeft,
+        activeWorkDuration, setActiveWorkDuration, activeBreakDuration, setActiveBreakDuration,
+        pendingWorkDuration, setPendingWorkDuration, pendingBreakDuration, setPendingBreakDuration,
+        pendingReset, setPendingReset, progress, setProgress, focusUnits, setFocusUnits,
+        skipSession, resetTimer
+    } = usePomodoro();
+    // Task state
     const [tasks, setTasks] = useState([]);
     const [newTask, setNewTask] = useState("");
     const [editIdx, setEditIdx] = useState(null);
     const [editText, setEditText] = useState("");
 
-    // =======================
-    // Controllers: Menu Open/Close
-    // =======================
-    // Close right menu on click outside
-    useEffect(() => {
-        if (!rightMenuOpen) return;
-        function handleClick(e) {
-            if (rightMenuRef.current && !rightMenuRef.current.contains(e.target)) {
-                setRightMenuOpen(false);
-            }
-        }
-        document.addEventListener('mousedown', handleClick);
-        return () => document.removeEventListener('mousedown', handleClick);
-    }, [rightMenuOpen]);
-    // Ref for the side menu
-    const menuRef = useRef(null);
-    // menuOpen: false or one of 'timer', 'background', 'mixer'
-    const [menuOpen, setMenuOpen] = useState(false);
-
-    // Close menu on click outside
-    useEffect(() => {
-        if (!menuOpen) return;
-        function handleClick(e) {
-            if (menuRef.current && !menuRef.current.contains(e.target)) {
-                setMenuOpen(false);
-            }
-        }
-        document.addEventListener('mousedown', handleClick);
-        return () => document.removeEventListener('mousedown', handleClick);
-    }, [menuOpen]);
-    // =======================
-    // State: Background, YouTube, Sound, Timer, Theme, Focus Units
-    // =======================
-    const [bg, setBg] = useState(DEFAULT_BG);
-    const [youtubeUrl, setYoutubeUrl] = useState("");
-    const [youtubeBg, setYoutubeBg] = useState("");
-    const [youtubeVolume, setYoutubeVolume] = useState(100); // 0-100
-    const youtubeIframeRef = useRef(null);
-    const [now, setNow] = useState(new Date());
-    const [isMuted, setIsMuted] = useState(false);
-    // Ambient sound state: allow multiple sounds and their volumes
-    const [ambientVolumes, setAmbientVolumes] = useState({
-        rain: 0.0,
-        cafe: 0.0,
-        forest: 0.0,
-        fireplace: 0.0,
-        ocean: 0.0,
-        piano: 0.0
-    });
-    const [isRunning, setIsRunning] = useState(false);
-    const [isBreak, setIsBreak] = useState(false);
-    const [secondsLeft, setSecondsLeft] = useState(25 * 60);
-    // Active durations used by timer/progress
-    const [activeWorkDuration, setActiveWorkDuration] = useState(25);
-    const [activeBreakDuration, setActiveBreakDuration] = useState(5);
-    // Pending (UI) durations
-    const [pendingWorkDuration, setPendingWorkDuration] = useState(25);
-    const [pendingBreakDuration, setPendingBreakDuration] = useState(5);
-    // Track if settings have changed during an active session
-    const [pendingReset, setPendingReset] = useState(false);
-    const prevWork = useRef(25);
-    const prevBreak = useRef(5);
-    // =======================
-    // Controllers: Pomodoro Settings Change
-    // =======================
-    useEffect(() => {
-        if (isRunning) {
-            if (pendingWorkDuration !== prevWork.current || pendingBreakDuration !== prevBreak.current) {
-                setPendingReset(true);
-            }
-        } else {
-            // If not running, apply changes immediately
-            setActiveWorkDuration(pendingWorkDuration);
-            setActiveBreakDuration(pendingBreakDuration);
-            setSecondsLeft(pendingWorkDuration * 60);
-            setProgress(100);
-            setPendingReset(false);
-        }
-        prevWork.current = pendingWorkDuration;
-        prevBreak.current = pendingBreakDuration;
-    }, [pendingWorkDuration, pendingBreakDuration, isRunning]);
-    const [progress, setProgress] = useState(100);
-    const [theme, setTheme] = useState("default");
-    const [focusUnits, setFocusUnits] = useState(0);
-
-    // =======================
-    // Constants: Background & Sound Options
-    // =======================
-    // Separate static and dynamic backgrounds for menu grouping
-    const staticBgOptions = [
-        { key: "/staticBg/forest.png", label: "Forest" },
-        { key: "/staticBg/cafe.png", label: "Cafe" },
-        { key: "/staticBg/beach.png", label: "Beach" },
-        { key: "/staticBg/city.png", label: "City" },
-        { key: "/staticBg/desk.png", label: "Desk" },
-        { key: "/staticBg/bookshelf.png", label: "Bookshelf" },
-        { key: "/staticBg/rain.png", label: "Rainy Window" },
-        { key: "/staticBg/stars.png", label: "Starry Night" },
-        { key: "/staticBg/cherryblossom.png", label: "Cherry Blossom" },
-        { key: "/staticBg/zengarden.png", label: "Zen Garden" },
-        { key: "/staticBg/autumn.png", label: "Autumn" }
-    ];
-    const dynamicBgOptions = [
-        { key: "/dynamicBg/forest.mp4", label: "Forest Video" },
-        { key: "/dynamicBg/fireplace.mp4", label: "Fireplace" },
-        { key: "/dynamicBg/rainycafe.mp4", label: "Rainy Cafe" },
-        { key: "/dynamicBg/beach.mp4", label: "Beach" },
-        { key: "/dynamicBg/beachsunset.mp4", label: "Beach Sunset" },
-        { key: "/dynamicBg/fairyforest.mp4", label: "Fairy Forest" },
-        { key: "/dynamicBg/ocean.mp4", label: "Ocean" },
-        { key: "/dynamicBg/rainycabin.mp4", label: "Rainy Cabin" },
-        { key: "/dynamicBg/waterfall.mp4", label: "Waterfall" }
-    ];
-    const sounds = ["rain", "cafe", "forest", "fireplace", "ocean", "piano"];
-    const soundNames = {
-        rain: "Rainfall",
-        cafe: "Coffee Shop",
-        forest: "Forest",
-        fireplace: "Fireplace",
-        ocean: "Ocean",
-        piano: "Piano"
-    };
-    const soundIcons = {
-        rain: "🌧️",
-        cafe: "☕",
-        forest: "🌲",
-        fireplace: "🔥",
-        ocean: "🌊",
-        piano: "🎹"
-    };
-    // Audio refs for each sound
-    const audioRefs = useRef({});
-    // Ref for ting sound
-    const tingRef = useRef(null);
-
-    // =======================
-    // Controllers: Ambient Sound Smooth Loop
-    // =======================
-    // Smooth loop for ambient sounds
-    useEffect(() => {
-        sounds.forEach(sound => {
-            const ref = audioRefs.current[sound];
-            if (ref) {
-                ref.loop = false; // We'll handle looping manually
-                ref.volume = ambientVolumes[sound] * (isMuted ? 0 : 1);
-                // Remove previous event
-                ref.onended = null;
-                if (ambientVolumes[sound] > 0 && !isMuted) {
-                    if (ref.paused) {
-                        ref.currentTime = 0;
-                        ref.play();
-                    }
-                    // Add smooth loop handler
-                    ref.onended = () => {
-                        // Fade out
-                        const originalVolume = ambientVolumes[sound] * (isMuted ? 0 : 1);
-                        let fadeSteps = 5;
-                        let fadeOut = setInterval(() => {
-                            if (ref.volume > 0.01) {
-                                ref.volume = Math.max(0, ref.volume - originalVolume / fadeSteps);
-                            } else {
-                                clearInterval(fadeOut);
-                                ref.currentTime = 0;
-                                ref.play().then(() => {
-                                    // Fade in
-                                    let fadeInStep = 0;
-                                    let fadeIn = setInterval(() => {
-                                        fadeInStep++;
-                                        ref.volume = Math.min(originalVolume, (fadeInStep / fadeSteps) * originalVolume);
-                                        if (fadeInStep >= fadeSteps) clearInterval(fadeIn);
-                                    }, 30);
-                                });
-                            }
-                        }, 30);
-                    };
-                } else {
-                    ref.pause();
-                    ref.currentTime = 0;
-                }
-            }
-        });
-    }, [ambientVolumes, isMuted]);
-
-    // =======================
-    // Controllers: Real-time Clock
-    // =======================
     // Real-time clock
     useEffect(() => {
         const interval = setInterval(() => setNow(new Date()), 1000);
         return () => clearInterval(interval);
     }, []);
 
-    // =======================
-    // Controllers: Pomodoro Timer Logic
-    // =======================
-    // Pomodoro timer logic
-    useEffect(() => {
-        if (!isRunning) return;
-
-        if (secondsLeft === 0) {
-            // Play ting sound at end of session
-            if (tingRef.current) {
-                tingRef.current.currentTime = 0;
-                tingRef.current.volume = 1.0;
-                tingRef.current.play();
-            }
-            // If just finished a focus session, increment focusUnits
-            if (!isBreak) setFocusUnits(f => f + 1);
-            setIsBreak(!isBreak);
-            setSecondsLeft(isBreak ? activeWorkDuration * 60 : activeBreakDuration * 60);
-            return;
-        }
-
-        const timer = setTimeout(() => {
-            setSecondsLeft(s => s - 1);
-            const totalSeconds = (isBreak ? activeBreakDuration : activeWorkDuration) * 60;
-            setProgress((secondsLeft / totalSeconds) * 100);
-        }, 1000);
-
-        return () => clearTimeout(timer);
-    }, [isRunning, secondsLeft, isBreak, activeWorkDuration, activeBreakDuration]);
-
-    // =======================
-    // UI: Timer Formatting
-    // =======================
-    // Format timer
-    const min = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
-    const sec = String(secondsLeft % 60).padStart(2, "0");
-
-    // =======================
-    // Controllers: Timer Controls
-    // =======================
-    // Skip to next session
-    const skipSession = () => {
-        setIsBreak(!isBreak);
-        setSecondsLeft(isBreak ? activeWorkDuration * 60 : activeBreakDuration * 60);
-        setProgress(100);
-    };
-
-    // Reset timer (apply pending settings)
-    const resetTimer = () => {
-        setIsRunning(false);
-        setIsBreak(false);
-        setActiveWorkDuration(pendingWorkDuration);
-        setActiveBreakDuration(pendingBreakDuration);
-        setSecondsLeft(pendingWorkDuration * 60);
-        setProgress(100);
-        setFocusUnits(0);
-        setPendingReset(false);
-    };
-
-    // =======================
-    // UI: Theme Style Helper
-    // =======================
-    // Get background style based on theme
-    const getThemeStyle = () => {
-        switch (theme) {
-            case "dark":
-                return "bg-gray-900 text-white";
-            case "green":
-                return "bg-emerald-900 text-white";
-            case "blue":
-                return "bg-blue-900 text-white";
-            case "purple":
-                return "bg-purple-900 text-white";
-            default:
-                return "bg-gradient-to-br from-blue-900 to-indigo-900 text-white";
-        }
-    };
-
-    // =======================
-    // Controllers: Task Handlers
-    // =======================
     // Task handlers
     const handleAddTask = () => {
         if (newTask.trim()) {
@@ -365,34 +128,10 @@ export default function SoloStudyPage() {
         setEditText("");
     };
 
-    // =======================
-    // Controllers: YouTube Volume Control & Mute
-    // =======================
-    // Store previous YouTube volume for mute toggle
-    const prevYoutubeVolume = useRef(100);
-    // Set YouTube volume via postMessage to iframe
-    useEffect(() => {
-        if (!youtubeBg || !youtubeIframeRef.current) return;
-        // If muted, set volume to 0, else set to youtubeVolume
-        const vol = isMuted ? 0 : youtubeVolume;
-        const setVolume = () => {
-            youtubeIframeRef.current.contentWindow.postMessage(
-                JSON.stringify({
-                    event: 'command',
-                    func: 'setVolume',
-                    args: [vol]
-                }),
-                '*'
-            );
-        };
-        setVolume();
-        const t = setTimeout(setVolume, 800);
-        return () => clearTimeout(t);
-    }, [youtubeBg, youtubeVolume, isMuted]);
+    // Timer formatting
+    const min = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
+    const sec = String(secondsLeft % 60).padStart(2, "0");
 
-    // =======================
-    // Controllers: Fullscreen Toggle
-    // =======================
     // Fullscreen toggle on 'F' key
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -410,63 +149,16 @@ export default function SoloStudyPage() {
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    // =======================
-    // UI: Render
-    // =======================
+
+    // Main render
     return (
         <div ref={fullscreenRef} className="w-screen h-screen min-h-0 min-w-0 overflow-hidden relative flex items-center justify-center">
-            {/* Background Video or Image */}
-            {youtubeBg ? (
-                <div className="absolute inset-0 w-full h-full z-0">
-                    <iframe
-                        ref={youtubeIframeRef}
-                        src={`https://www.youtube.com/embed/${getYoutubeId(youtubeBg)}?autoplay=1&controls=0&loop=1&playlist=${getYoutubeId(youtubeBg)}&modestbranding=1&rel=0&enablejsapi=1`}
-                        allow="autoplay; fullscreen"
-                        allowFullScreen
-                        frameBorder="0"
-                        className="w-full h-full absolute inset-0 object-cover"
-                        style={{ pointerEvents: 'none' }}
-                        title="YouTube Background"
-                    />
-                </div>
-            ) : bg === "gradient" ? (
-                <div
-                    className="absolute inset-0 w-full h-full z-0"
-                    style={{
-                        background: "linear-gradient(135deg, #0f2027 0%, #2c7744 25%, #11998e 50%, #38ef7d 75%, #b2f9b9 100%)"
-                    }}
-                />
-            ) : bg.endsWith('.mp4') ? (
-                <video
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="absolute inset-0 w-full h-full object-cover z-0"
-                    src={bg.startsWith('/dynamicBg/') ? bg : `/dynamicBg/${bg.replace(/^\/+/, '')}`}
-                    onLoadedMetadata={e => {
-                        // Ensure autoplay works on all browsers
-                        const vid = e.target;
-                        if (vid.paused) vid.play();
-                    }}
-                />
-            ) : (
-                <div
-                    className="absolute inset-0 w-full h-full z-0"
-                    style={{
-                        backgroundImage: `url(${bg.startsWith('/staticBg/') ? bg : `/staticBg/${bg.replace(/^\/+/, '')}`})`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
-                        backgroundRepeat: "no-repeat",
-                    }}
-                />
-            )}
-            {/* Dark overlay for better readability */}
-            <div className="absolute inset-0 bg-black/20 backdrop-blur-[3px] z-0"></div>
-
-
+            {/* Background Video/Image/YouTube */}
+            <Background youtubeBg={youtubeBg} youtubeIframeRef={youtubeIframeRef} bg={bg} />
             {/* Ting sound for session end */}
-            <audio ref={tingRef} src="/ting.mp3" preload="auto" />
+            <TingAudio tingRef={tingRef} />
+            {/* Always-mounted audio elements for ambient sounds */}
+            <AmbientAudio audioRefs={audioRefs} />
 
             {/* Floating Side Menu (contextual) */}
             <div
@@ -1049,6 +741,6 @@ export default function SoloStudyPage() {
                     </div>
                 </div>
             </div>
-        </div >
+        </div>
     );
 }
