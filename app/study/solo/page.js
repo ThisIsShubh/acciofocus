@@ -15,7 +15,7 @@ import Timer from "../../../components/Timer";
 import TaskList from "../../../components/TaskList";
 import Background from "../../../components/Background";
 import AmbientAudio from "../../../components/AmbientAudio";
-import TingAudio from "../../../components/TingAudio";
+
 
 // Constants for backgrounds and sounds
 const staticBgOptions = [
@@ -149,6 +149,15 @@ export default function SoloStudyPage() {
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, []);
 
+    // Play ting sound at end of session
+    useEffect(() => {
+        if (isRunning && secondsLeft === 1 && tingRef.current) {
+            tingRef.current.currentTime = 0;
+            tingRef.current.volume = 1;
+            tingRef.current.play();
+        }
+    }, [isRunning, secondsLeft]);
+
 
     // Main render
     return (
@@ -156,7 +165,7 @@ export default function SoloStudyPage() {
             {/* Background Video/Image/YouTube */}
             <Background youtubeBg={youtubeBg} youtubeIframeRef={youtubeIframeRef} bg={bg} />
             {/* Ting sound for session end */}
-            <TingAudio tingRef={tingRef} />
+            <audio ref={tingRef} src="/ting.mp3" preload="auto" />
             {/* Always-mounted audio elements for ambient sounds */}
             <AmbientAudio audioRefs={audioRefs} />
 
@@ -385,82 +394,82 @@ export default function SoloStudyPage() {
                             </div>
                         </div>
                     )}
-            {menuOpen === 'mixer' && (
-                <div className="">
-                    <div className="flex items-center justify-between mb-4">
-                    </div>
-                    <div className="space-y-4">
-                        {sounds.map((sound) => {
-                            const isActive = ambientVolumes[sound] > 0;
-                            return (
-                                <div
-                                    key={sound}
-                                    className={`flex items-center gap-3 p-2 rounded-lg transition-all ${isActive ? "bg-white" : ""}`}
+                    {menuOpen === 'mixer' && (
+                        <div className="">
+                            <div className="flex items-center justify-between mb-4">
+                            </div>
+                            <div className="space-y-4">
+                                {sounds.map((sound) => {
+                                    const isActive = ambientVolumes[sound] > 0;
+                                    return (
+                                        <div
+                                            key={sound}
+                                            className={`flex items-center gap-3 p-2 rounded-lg transition-all ${isActive ? "bg-white" : ""}`}
+                                        >
+                                            {/* Audio elements moved outside menu for persistent playback */}
+                                            <div className="flex items-center gap-3 w-full">
+                                                <div className="text-2xl w-10 h-10 flex items-center justify-center bg-green-500/20 rounded-lg">
+                                                    {soundIcons[sound]}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex justify-between items-center mb-1">
+                                                        <span className="text-sm font-medium text-green-800 truncate">
+                                                            {soundNames[sound]}
+                                                        </span>
+                                                        <span className="text-xs font-mono bg-green-500/10 px-2 py-0.5 rounded text-green-700">
+                                                            {Math.round(ambientVolumes[sound] * 100)}%
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="range"
+                                                            min={0}
+                                                            max={1}
+                                                            step={0.01}
+                                                            value={ambientVolumes[sound]}
+                                                            onChange={(e) =>
+                                                                setAmbientVolumes((v) => ({
+                                                                    ...v,
+                                                                    [sound]: parseFloat(e.target.value),
+                                                                }))
+                                                            }
+                                                            className="w-full h-2 bg-green-500/20 rounded-lg appearance-none cursor-pointer accent-green-500"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="mt-4 flex justify-center">
+                                <button
+                                    className="text-xs text-green-700 hover:text-green-800 font-medium flex items-center gap-1"
+                                    onClick={() => {
+                                        // Set all volumes to 0
+                                        const resetVolumes = sounds.reduce((acc, sound) => {
+                                            acc[sound] = 0;
+                                            return acc;
+                                        }, {});
+                                        setAmbientVolumes(resetVolumes);
+                                    }}
                                 >
-                                    {/* Audio elements moved outside menu for persistent playback */}
-                                    <div className="flex items-center gap-3 w-full">
-                                        <div className="text-2xl w-10 h-10 flex items-center justify-center bg-green-500/20 rounded-lg">
-                                            {soundIcons[sound]}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex justify-between items-center mb-1">
-                                                <span className="text-sm font-medium text-green-800 truncate">
-                                                    {soundNames[sound]}
-                                                </span>
-                                                <span className="text-xs font-mono bg-green-500/10 px-2 py-0.5 rounded text-green-700">
-                                                    {Math.round(ambientVolumes[sound] * 100)}%
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    type="range"
-                                                    min={0}
-                                                    max={1}
-                                                    step={0.01}
-                                                    value={ambientVolumes[sound]}
-                                                    onChange={(e) =>
-                                                        setAmbientVolumes((v) => ({
-                                                            ...v,
-                                                            [sound]: parseFloat(e.target.value),
-                                                        }))
-                                                    }
-                                                    className="w-full h-2 bg-green-500/20 rounded-lg appearance-none cursor-pointer accent-green-500"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                    <div className="mt-4 flex justify-center">
-                        <button
-                            className="text-xs text-green-700 hover:text-green-800 font-medium flex items-center gap-1"
-                            onClick={() => {
-                                // Set all volumes to 0
-                                const resetVolumes = sounds.reduce((acc, sound) => {
-                                    acc[sound] = 0;
-                                    return acc;
-                                }, {});
-                                setAmbientVolumes(resetVolumes);
-                            }}
-                        >
-                            <FaRedo className="text-xs" /> Reset all volumes
-                        </button>
-                    </div>
-                </div>
-            )}
+                                    <FaRedo className="text-xs" /> Reset all volumes
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
-            {/* Always-mounted audio elements for ambient sounds */}
-            {sounds.map((sound) => (
-                <audio
-                    key={sound}
-                    ref={el => (audioRefs.current[sound] = el)}
-                    src={`/sounds/${sound}.mp3`}
-                    preload="auto"
-                    style={{ display: 'none' }}
-                />
-            ))}
+                    {/* Always-mounted audio elements for ambient sounds */}
+                    {sounds.map((sound) => (
+                        <audio
+                            key={sound}
+                            ref={el => (audioRefs.current[sound] = el)}
+                            src={`/sounds/${sound}.mp3`}
+                            preload="auto"
+                            style={{ display: 'none' }}
+                        />
+                    ))}
                     {/* Removed End Session button from background and mixer menus */}
                 </div>
             </div>
@@ -501,15 +510,29 @@ export default function SoloStudyPage() {
                 )
             }
 
-            {/* Right Menu Toggle Button */}
+            {/* Right Menu Toggle Button as a vertical flap/notch with 'Tasks' */}
             {
                 !rightMenuOpen && (
                     <button
-                        className="fixed right-0 z-40 bg-green-500/10 hover:bg-green-600 text-white rounded-full p-3 shadow-lg flex items-center"
+                        className="fixed top-1/2 right-0 z-40 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white/50 shadow-lg backdrop-blur-sm flex items-center justify-center transition-all group"
+                        style={{
+                            writingMode: 'vertical-rl',
+                            textOrientation: 'mixed',
+                            borderTopLeftRadius: '1.5rem',
+                            borderBottomLeftRadius: '1.5rem',
+                            borderTopRightRadius: 0,
+                            borderBottomRightRadius: 0,
+                            padding: '0.75rem 0.5rem',
+                            minHeight: '120px',
+                            minWidth: '44px',
+                            fontWeight: 700,
+                            fontSize: '1rem',
+                            letterSpacing: '0.1em',
+                        }}
                         onClick={() => setRightMenuOpen(true)}
                         title="Task List"
                     >
-                        <FaListUl className="text-xl" />
+                        <span className="group-hover:scale-105 transition-transform" style={{color: 'inherit'}}>Tasks</span>
                     </button>
                 )
             }
@@ -532,56 +555,21 @@ export default function SoloStudyPage() {
                             <FaTimes className="text-lg" />
                         </button>
                     </div>
-                    <div className="flex gap-2 mb-4">
-                        <input
-                            type="text"
-                            value={newTask}
-                            onChange={e => setNewTask(e.target.value)}
-                            onKeyDown={e => { if (e.key === 'Enter') handleAddTask(); }}
-                            placeholder="Add a new task..."
-                            className="flex-1 px-3 py-2 rounded-lg border border-green-300 focus:outline-none focus:ring-2 focus:ring-green-400"
-                        />
-                        <button
-                            className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg"
-                            onClick={handleAddTask}
-                        >
-                            <FaPlus />
-                        </button>
-                    </div>
-                    <ul className="flex-1 flex flex-col gap-2">
-                        {tasks.length === 0 && (
-                            <li className="text-gray-400 italic text-center">No tasks yet.</li>
-                        )}
-                        {tasks.map((task, idx) => (
-                            <li key={idx} className={`flex items-center gap-2 px-2 py-2 rounded-lg ${task.done ? 'bg-green-100 line-through text-green-700' : 'bg-white'}`}>
-                                <button
-                                    className={`p-1 rounded-full border ${task.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300'}`}
-                                    onClick={() => handleToggleTask(idx)}
-                                >
-                                    <FaCheck />
-                                </button>
-                                {editIdx === idx ? (
-                                    <>
-                                        <input
-                                            className="flex-1 px-2 py-1 rounded border border-green-300"
-                                            value={editText}
-                                            onChange={e => setEditText(e.target.value)}
-                                            onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(idx); if (e.key === 'Escape') handleCancelEdit(); }}
-                                            autoFocus
-                                        />
-                                        <button className="p-1 text-green-600" onClick={() => handleSaveEdit(idx)}><FaCheck /></button>
-                                        <button className="p-1 text-gray-400" onClick={handleCancelEdit}><FaTimes /></button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <span className="flex-1 cursor-pointer" onDoubleClick={() => handleEditTask(idx)}>{task.text}</span>
-                                        <button className="p-1 text-blue-500" onClick={() => handleEditTask(idx)}><FaEdit /></button>
-                                        <button className="p-1 text-red-500" onClick={() => handleDeleteTask(idx)}><FaTrash /></button>
-                                    </>
-                                )}
-                            </li>
-                        ))}
-                    </ul>
+                    {/* Task input form is now handled inside TaskList component */}
+                    <TaskList
+                        tasks={tasks}
+                        newTask={newTask}
+                        editIdx={editIdx}
+                        editText={editText}
+                        setNewTask={setNewTask}
+                        handleAddTask={handleAddTask}
+                        handleToggleTask={handleToggleTask}
+                        handleDeleteTask={handleDeleteTask}
+                        handleEditTask={handleEditTask}
+                        handleSaveEdit={handleSaveEdit}
+                        handleCancelEdit={handleCancelEdit}
+                        setEditText={setEditText}
+                    />
                 </div>
             </div>
 
@@ -627,44 +615,7 @@ export default function SoloStudyPage() {
                 </div>
 
                 {/* Circular Progress Timer */}
-                <div className="relative w-72 h-72 mb-8">
-                    {/* Progress circle */}
-                    <div className="absolute inset-0">
-                        <svg className="w-full h-full" viewBox="0 0 100 100">
-                            <circle
-                                cx="50"
-                                cy="50"
-                                r="45"
-                                fill="none"
-                                stroke="rgba(255,255,255,0.1)"
-                                strokeWidth="8"
-                            />
-                            <circle
-                                cx="50"
-                                cy="50"
-                                r="45"
-                                fill="none"
-                                stroke={isBreak ? "#f59f0b5c" : "#00c9503e"}
-                                strokeWidth="8"
-                                strokeLinecap="round"
-                                strokeDasharray={2 * Math.PI * 45}
-                                strokeDashoffset={2 * Math.PI * 45 * (1 - progress / 100)}
-                                transform="rotate(-90 50 50)"
-                                className="transition-all duration-1000 ease-linear"
-                            />
-                        </svg>
-                    </div>
-
-                    {/* Timer display */}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <div className="text-5xl font-bold text-white font-mono">
-                            {min}:{sec}
-                        </div>
-                        <div className={`text-lg font-semibold mt-2 ${isBreak ? "text-amber-400" : "text-green-400"}`}>
-                            {isBreak ? "Break Time" : "Focus Time"}
-                        </div>
-                    </div>
-                </div>
+                <Timer min={min} sec={sec} isBreak={isBreak} progress={progress} />
 
                 {/* Timer Controls */}
                 <div className="flex gap-4">
