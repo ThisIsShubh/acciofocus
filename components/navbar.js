@@ -2,6 +2,15 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import {
+  ClerkProvider,
+  SignInButton,
+  SignUpButton,
+  SignedIn,
+  SignedOut,
+  UserButton,
+} from '@clerk/nextjs'
+import { redirect } from "next/dist/server/api-utils";
 
 const NAV_ITEMS = [
   { label: "Solo Study", href: "/study/solo" },
@@ -31,9 +40,8 @@ export default function Navbar() {
 
   return (
     <nav
-      className={`fixed top-0 left-0 w-full z-50 transition-transform duration-300 ${
-        visible ? "translate-y-0" : "-translate-y-full"
-      }`}
+      className={`fixed top-0 left-0 w-full z-50 transition-transform duration-300 ${visible ? "translate-y-0" : "-translate-y-full"
+        }`}
       style={{
         // background: "rgba(99, 59, 0, 1)",
         backdropFilter: "blur(16px)",
@@ -75,20 +83,26 @@ export default function Navbar() {
         </div>
 
         {/* Right side: Login & Signup buttons */}
-        <div className="flex items-center gap-3">
-          <Link
-            href="/(auth)/login"
-            className="px-4 py-2 bg-white border border-green-500 text-green-500 rounded-lg font-semibold shadow hover:bg-green-50 transition"
-          >
-            Login
-          </Link>
-          <Link
-            href="/(auth)/signup"
-            className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold shadow hover:bg-green-700 transition border-2 border-green-500"
-          >
-            Signup
-          </Link>
-        </div>
+        <ClerkProvider>
+          <div className="flex items-center gap-3">
+            <SignedOut>
+              <Link href="/login">
+                <button className="px-4 py-2 bg-white border border-green-500 text-green-500 rounded-lg font-semibold shadow hover:bg-green-50 transition">
+                  Sign In
+                </button>
+
+              </Link>
+              <Link href="/signup">
+                <button className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold shadow hover:bg-green-700 transition border-2 border-green-500">
+                  Sign Up
+                </button>
+              </Link>
+            </SignedOut>
+            <SignedIn>
+              <UserButton />
+            </SignedIn>
+          </div>
+        </ClerkProvider>
       </div>
     </nav>
   );

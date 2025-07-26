@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const AchievementSchema = new mongoose.Schema({
   id: String,
@@ -67,7 +67,7 @@ const StudyRoomSchema = new mongoose.Schema({
 
 const UserSchema = new mongoose.Schema({
   profile: {
-    id: String,
+    id: { type: String, unique: true, required: true },
     name: String,
     email: String,
     avatar: String,
@@ -96,4 +96,5 @@ const UserSchema = new mongoose.Schema({
   studyRooms: [StudyRoomSchema]
 });
 
-module.exports = mongoose.models.User || mongoose.model('User', UserSchema);
+// module.exports = mongoose.models.User || mongoose.model('User', UserSchema);
+export default mongoose.models.User || mongoose.model('User', UserSchema);

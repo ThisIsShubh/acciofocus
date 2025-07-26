@@ -4,12 +4,16 @@ import React, { useState, useRef } from 'react';
 import { FaCrown, FaCheckCircle, FaTrophy, FaUserFriends, FaStar, FaFire, FaBook, FaClock, FaChartLine, FaTasks, FaMedal, FaUsers, FaDoorOpen, FaEllipsisV, FaPlus } from 'react-icons/fa';
 import { userData } from '@/data/user';
 import Navbar from '@/components/navbar';
+import { useUser } from '@clerk/nextjs';
+
 
 function formatMinutes(mins) {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return `${h}h ${m}m`;
 }
+
+
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -26,6 +30,33 @@ function formatDateTime(dateStr) {
 }
 
 export default function DashboardPage() {
+const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
+
+  const fetchExternalData = async () => {
+    // Use `getToken()` to get the current user's session token
+    const token = await getToken()
+
+    // Use `token` to fetch data from an external API
+    const response = await fetch('https://api.example.com/data', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    return response.json()
+  }
+
+  // Use `isLoaded` to check if Clerk is loaded
+  if (!isLoaded) {
+    return <div>Loading...</div>
+  }
+
+  // Use `isSignedIn` to check if the user is signed in
+  if (!isSignedIn) {
+    // You could also add a redirect to the sign-in page here
+    return <div>Sign in to view this page</div>
+  }
+
   const { profile, stats, goals, recentSessions, tasks, friends, achievements, studyRooms } = userData;
   
   // State for active tab
@@ -79,7 +110,7 @@ export default function DashboardPage() {
             <div className="flex items-start gap-6">
               <div className="relative">
                 <img 
-                  src={profile.avatar} 
+                  src={user?.imageUrl || '/default-avatar.png'} 
                   alt="avatar" 
                   className="w-20 h-20 rounded-full border-4 border-green-400 shadow-md" 
                 />
@@ -90,7 +121,7 @@ export default function DashboardPage() {
               
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-3 mb-2">
-                  <h1 className="text-2xl font-bold text-gray-800">{profile.name}</h1>
+                  <h1 className="text-2xl font-bold text-gray-800">{user.firstName}</h1>
                   <div className="flex items-center gap-2">
                     <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold flex items-center">
                       <FaFire className="mr-1 text-orange-500" /> {profile.streak} day streak
