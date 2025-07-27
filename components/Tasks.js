@@ -1,7 +1,7 @@
 // components/dashboard/TasksSection.js
 'use client';
-import React, { useState } from 'react';
-import { FaTasks, FaCheckCircle, FaEllipsisV, FaPlus, FaTrash, FaEdit } from 'react-icons/fa';
+import React, { useState, useMemo } from 'react';
+import { FaTasks, FaCheckCircle, FaEllipsisV, FaPlus, FaTrash } from 'react-icons/fa';
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -10,6 +10,9 @@ function formatDate(dateStr) {
 export default function TasksSection({ taskList, setTaskList }) {
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const [sortOption, setSortOption] = useState('dueDate');
+  const [sortDirection, setSortDirection] = useState('asc');
   const [newTask, setNewTask] = useState({
     title: '',
     subject: '',
@@ -17,34 +20,64 @@ export default function TasksSection({ taskList, setTaskList }) {
     dueDate: new Date().toISOString().split('T')[0]
   });
 
+  // Sort tasks based on selected option
+  const sortedTasks = useMemo(() => {
+    return [...taskList].sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortOption) {
+        case 'priority':
+          const priorityOrder = { high: 3, medium: 2, low: 1 };
+          comparison = priorityOrder[a.priority] - priorityOrder[b.priority];
+          break;
+        
+        case 'dueDate':
+          comparison = new Date(a.dueDate) - new Date(b.dueDate);
+          break;
+          
+        case 'creationDate':
+          comparison = new Date(a.createdAt) - new Date(b.createdAt);
+          break;
+          
+        default:
+          comparison = a.title.localeCompare(b.title);
+      }
+      
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [taskList, sortOption, sortDirection]);
+
+  // // Only display first 5 tasks - scroll for the rest
+  // const displayedTasks = sortedTasks.slice(0, 5);
+
   // Toggle task completion with database update
   const toggleTaskCompletion = async (taskId) => {
     setLoading(true);
     try {
       const task = taskList.find(t => t.id === taskId);
-      if (!task) {
-        throw new Error('Task not found');
-      }
       
       const response = await fetch(`/api/tasks/${taskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          completed: !task.completed
-        }),
+        body: JSON.stringify({ completed: !task.completed }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update task');
+      if (response.ok) {
+        try {
+          const updatedTask = await response.json();
+          setTaskList(taskList.map(t => 
+            t.id === taskId ? { ...t, completed: updatedTask.completed } : t
+          ));
+        } catch {
+          setTaskList(taskList.map(t => 
+            t.id === taskId ? { ...t, completed: !t.completed } : t
+          ));
+        }
+      } else {
+        throw new Error('Failed to update task');
       }
-
-      const updatedTask = await response.json();
-      setTaskList(taskList.map(t => 
-        t.id === taskId ? { ...t, completed: updatedTask.completed } : t
-      ));
     } catch (error) {
       console.error('Error updating task:', error);
       alert('Failed to update task: ' + error.message);
@@ -69,7 +102,10 @@ export default function TasksSection({ taskList, setTaskList }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newTask),
+        body: JSON.stringify({
+          ...newTask,
+          createdAt: new Date().toISOString() // Add creation date for sorting
+        }),
       });
 
       if (!response.ok) {
@@ -118,6 +154,35 @@ export default function TasksSection({ taskList, setTaskList }) {
     }
   };
 
+  // Handle sorting option selection
+  const handleSortSelect = (option) => {
+    if (sortOption === option) {
+      // Toggle direction if same option selected
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new option with default ascending order
+      setSortOption(option);
+      setSortDirection('asc');
+    }
+    setShowSortMenu(false);
+  };
+
+  // Get display name for sort option
+  const getSortDisplayName = () => {
+    const directions = {
+      asc: '↑',
+      desc: '↓'
+    };
+    
+    const names = {
+      dueDate: 'Due Date',
+      priority: 'Priority',
+      creationDate: 'Creation Date'
+    };
+    
+    return `${names[sortOption]} ${directions[sortDirection]}`;
+  };
+
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6">
       <div className="flex justify-between items-center mb-4">
@@ -132,9 +197,53 @@ export default function TasksSection({ taskList, setTaskList }) {
           >
             <FaPlus />
           </button>
-          <button className="text-gray-400 hover:text-gray-600">
-            <FaEllipsisV />
-          </button>
+          <div className="relative">
+            <button 
+              onClick={() => setShowSortMenu(!showSortMenu)}
+              className="text-gray-400 hover:text-gray-600 p-1 rounded"
+            >
+              <FaEllipsisV />
+            </button>
+            {showSortMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 border border-gray-200">
+                <div className="px-4 py-2 text-xs text-gray-500 font-medium">Sort By</div>
+                <button
+                  onClick={() => handleSortSelect('dueDate')}
+                  className={`block px-4 py-2 text-sm w-full text-left ${
+                    sortOption === 'dueDate' 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Due Date
+                </button>
+                <button
+                  onClick={() => handleSortSelect('priority')}
+                  className={`block px-4 py-2 text-sm w-full text-left ${
+                    sortOption === 'priority' 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Priority Level
+                </button>
+                <button
+                  onClick={() => handleSortSelect('creationDate')}
+                  className={`block px-4 py-2 text-sm w-full text-left ${
+                    sortOption === 'creationDate' 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Creation Date
+                </button>
+                <div className="border-t border-gray-200 my-1"></div>
+                <div className="px-4 py-2 text-xs text-gray-500">
+                  Current: {getSortDisplayName()}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -163,9 +272,9 @@ export default function TasksSection({ taskList, setTaskList }) {
               onChange={(e) => setNewTask({...newTask, priority: e.target.value})}
               className="px-3 py-2 border rounded-lg text-sm"
             >
-              <option value="low">Low Priority</option>
-              <option value="medium">Medium Priority</option>
-              <option value="high">High Priority</option>
+              <option value="low" className='bg-green-100 rounded-lg'>Low Priority</option>
+              <option value="medium" className='bg-yellow-100 rounded-lg'>Medium Priority</option>
+              <option value="high" className='bg-red-100 rounded-lg'>High Priority</option>
             </select>
             <input
               type="date"
@@ -194,8 +303,8 @@ export default function TasksSection({ taskList, setTaskList }) {
         </form>
       )}
 
-      <div className="space-y-4">
-        {taskList.map(task => (
+      <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+        {sortedTasks.map(task => (
           <div
             key={task.id}
             className={`flex items-start p-3 rounded-lg ${
@@ -244,6 +353,18 @@ export default function TasksSection({ taskList, setTaskList }) {
             </div>
           </div>
         ))}
+
+        {taskList.length === 0 && (
+          <div className="text-center py-4 text-gray-500">
+            No tasks yet. Add your first task!
+          </div>
+        )}
+        
+        {taskList.length > 5 && (
+          <div className="text-center py-2 text-sm text-gray-500">
+            Showing 5 of {taskList.length} tasks. Scroll to see more.
+          </div>
+        )}
       </div>
     </div>
   );

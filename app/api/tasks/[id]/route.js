@@ -10,6 +10,81 @@ function getTaskId(url) {
 }
 
 // PUT handler - Update a specific task
+// export async function PUT(req) {
+//   const authResult = await auth();
+  
+//   if (!authResult.userId) {
+//     return new Response(JSON.stringify({ 
+//       error: 'Not authenticated',
+//       details: 'User ID not found in authentication result'
+//     }), { status: 401 });
+//   }
+
+//   const userId = authResult.userId;
+//   const taskId = getTaskId(req.url);
+  
+//   console.log(`PUT /api/tasks/${taskId} - User ID: ${userId}`);
+  
+//   await connectDB();
+
+
+//   try {
+//     const body = await req.json();
+//     console.log('Request body:', body);
+//     // Find the user first
+//     const user = await User.findOne({ 'profile.id': userId });
+//     console.log('User found:', user);
+//     if (!user) {
+//       return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
+//     }
+    
+//     // Find the task index in the user's tasks array
+//     const taskIndex = user.tasks.findIndex(task => task.id === taskId);
+    
+//     if (taskIndex === -1) {
+//       return new Response(JSON.stringify({ 
+//         error: 'Task not found',
+//         details: `Task ID ${taskId} not found for user ${userId}`
+//       }), { status: 404 });
+//     }
+    
+//     // Update the task fields while preserving the id
+//     const updatedTask = {
+//       ...user.tasks[taskIndex],
+//       ...body,
+//       id: taskId // Ensure the ID doesn't change
+//     };
+//     console.log('Updated task:', updatedTask);
+//     // Update the task in the array using MongoDB's positional operator
+//     const result = await User.findOneAndUpdate(
+//       { 'profile.id': userId, 'tasks.id': taskId },
+//       { $set: { 'tasks.$': updatedTask } },
+//       { new: true }
+//     );
+    
+//     if (!result) {
+//       return new Response(JSON.stringify({ 
+//         error: 'Failed to update task',
+//         details: 'Database update operation failed'
+//       }), { status: 500 });
+//     }
+    
+//     // Find the updated task in the result
+//     const updatedTaskInResult = result.tasks.find(task => task.id === taskId);
+    
+//     return Response.json(updatedTaskInResult);
+//   } catch (error) {
+//     console.error('Error updating task:', error);
+//     return new Response(JSON.stringify({ 
+//       error: 'Failed to update task',
+//       details: error.message 
+//     }), { status: 500 });
+//   }
+// }
+
+// DELETE handler - Delete a specific task
+
+// app/api/tasks/[id]/route.js
 export async function PUT(req) {
   const authResult = await auth();
   
@@ -30,14 +105,14 @@ export async function PUT(req) {
   try {
     const body = await req.json();
     
-    // Find the user first
+    // Find the user document
     const user = await User.findOne({ 'profile.id': userId });
     
     if (!user) {
       return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
     }
     
-    // Find the task index in the user's tasks array
+    // Find the task in the user's tasks array
     const taskIndex = user.tasks.findIndex(task => task.id === taskId);
     
     if (taskIndex === -1) {
@@ -47,31 +122,23 @@ export async function PUT(req) {
       }), { status: 404 });
     }
     
-    // Update the task fields while preserving the id
+    // Create a plain JavaScript copy of the task
+    const taskCopy = { ...user.tasks[taskIndex].toObject() };
+    
+    // Update the task with new values
     const updatedTask = {
-      ...user.tasks[taskIndex],
+      ...taskCopy,
       ...body,
-      id: taskId // Ensure the ID doesn't change
+      id: taskId // Preserve the ID
     };
     
-    // Update the task in the array using MongoDB's positional operator
-    const result = await User.findOneAndUpdate(
-      { 'profile.id': userId, 'tasks.id': taskId },
-      { $set: { 'tasks.$': updatedTask } },
-      { new: true }
-    );
+    // Replace the task in the array
+    user.tasks[taskIndex] = updatedTask;
     
-    if (!result) {
-      return new Response(JSON.stringify({ 
-        error: 'Failed to update task',
-        details: 'Database update operation failed'
-      }), { status: 500 });
-    }
+    // Save the entire user document
+    await user.save();
     
-    // Find the updated task in the result
-    const updatedTaskInResult = result.tasks.find(task => task.id === taskId);
-    
-    return Response.json(updatedTaskInResult);
+    return Response.json(updatedTask);
   } catch (error) {
     console.error('Error updating task:', error);
     return new Response(JSON.stringify({ 
@@ -81,7 +148,6 @@ export async function PUT(req) {
   }
 }
 
-// DELETE handler - Delete a specific task
 export async function DELETE(req) {
   const authResult = await auth();
   

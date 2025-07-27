@@ -208,7 +208,7 @@ export default function CustomSignUp() {
           </div>
           
           {/* CAPTCHA container (required by Clerk) */}
-          <div id="clerk-captcha" className="hidden"></div>
+          <div id="clerk-captcha" className=""></div>
           
           {isVerifying ? (
             <form onSubmit={handleVerify}>
