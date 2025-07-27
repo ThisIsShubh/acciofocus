@@ -1,11 +1,8 @@
 import { clerkMiddleware } from '@clerk/nextjs/server';
-import { authMiddleware } from '@clerk/nextjs';
 
-export default clerkMiddleware(
-{
-    publicRoutes: ["/", "/study/solo", "/(auth)/((?!sign-in|sign-up|sign-out).*)", "/api/webhook/clerk"],
+export default clerkMiddleware({
+  publicRoutes: ["/", "/study/solo", "/(auth)/((?!login|signup|signout).*)", "/api/webhook/clerk", "/sso-callback"]
 });
-
 
 export const config = {
   matcher: [
