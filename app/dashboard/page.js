@@ -1,19 +1,16 @@
 // app/dashboard/page.js
 'use client';
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaCrown, FaCheckCircle, FaTrophy, FaUserFriends, FaStar, FaFire, FaBook, FaClock, FaChartLine, FaTasks, FaMedal, FaUsers, FaDoorOpen, FaEllipsisV, FaPlus } from 'react-icons/fa';
-import { userData } from '@/data/user';
 import Navbar from '@/components/navbar';
-import { useUser } from '@clerk/nextjs';
 
+import TasksSection from '@/components/Tasks';
 
 function formatMinutes(mins) {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return `${h}h ${m}m`;
 }
-
-
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -30,46 +27,121 @@ function formatDateTime(dateStr) {
 }
 
 export default function DashboardPage() {
-const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
-
-  const fetchExternalData = async () => {
-    // Use `getToken()` to get the current user's session token
-    const token = await getToken()
-
-    // Use `token` to fetch data from an external API
-    const response = await fetch('https://api.example.com/data', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-
-    return response.json()
-  }
-
-  // Use `isLoaded` to check if Clerk is loaded
-  if (!isLoaded) {
-    return <div>Loading...</div>
-  }
-
-  // Use `isSignedIn` to check if the user is signed in
-  if (!isSignedIn) {
-    // You could also add a redirect to the sign-in page here
-    return <div>Sign in to view this page</div>
-  }
-
-  const { profile, stats, goals, recentSessions, tasks, friends, achievements, studyRooms } = userData;
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
   // State for active tab
   const [activeTab, setActiveTab] = useState('overview');
-  
   // State for task completion
-  const [taskList, setTaskList] = useState(tasks);
-  
+  const [taskList, setTaskList] = useState([]);
   // State for goal progress
-  const [goalList, setGoalList] = useState(goals);
-  
+  const [goalList, setGoalList] = useState([]);
   // State for achievement filter
   const [achievementFilter, setAchievementFilter] = useState('all');
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        console.log('=== Dashboard: Starting to fetch user data ===');
+        console.log('Fetching user data from /api/user/me...');
+        
+        const res = await fetch('/api/user/me', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        console.log('Response status:', res.status);
+        console.log('Response headers:', Object.fromEntries(res.headers.entries()));
+        
+        if (!res.ok) {
+          const errorData = await res.json();
+          console.error('API Error:', errorData);
+          throw new Error(`HTTP error! status: ${res.status}, message: ${errorData.error || 'Unknown error'}`);
+        }
+        
+        const data = await res.json();
+        console.log('User data received:', data);
+        console.log('Goals data:', data.goals);
+        console.log('Stats data:', data.stats);
+        setUser(data);
+        setTaskList(data.tasks || []);
+        setGoalList(data.goals || []);
+        setError(null);
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+  
+  if (error) return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
+      <div className="text-center max-w-md mx-auto p-6">
+        <div className="text-red-500 text-6xl mb-4">⚠️</div>
+        <h2 className="text-xl font-bold text-gray-800 mb-2">Error Loading Dashboard</h2>
+        <p className="text-gray-600 mb-4">{error}</p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    </div>
+  );
+  
+  if (!user) return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
+      <div className="text-center max-w-md mx-auto p-6">
+        <div className="text-gray-500 text-6xl mb-4">👤</div>
+        <h2 className="text-xl font-bold text-gray-800 mb-2">No User Data Found</h2>
+        <p className="text-gray-600 mb-4">Unable to load your profile information. Please try refreshing the page or contact support.</p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
+        >
+          Refresh Page
+        </button>
+      </div>
+    </div>
+  );
+
+  // Extract data from the flattened user object returned by /api/user/me
+  const profile = {
+    name: user.name || 'Anonymous User',
+    email: user.email || '',
+    avatar: user.avatar || '',
+    joinDate: user.joinDate || new Date(),
+    lastActive: user.lastActive || new Date(),
+    streak: user.streak || 0,
+    level: user.level || 1,
+    xp: user.xp || 0,
+    nextLevelXp: user.nextLevelXp || 100,
+    bio: user.bio || ''
+  };
+  
+  // Safely destructure with default values
+  const stats = user.stats || {
+    totalStudyTime: 0,
+    weeklyStudyTime: 0,
+    dailyAverage: 0,
+    sessionsCompleted: 0,
+    focusRate: 0,
+    subjects: {},
+    productivityTrend: []
+  };
+  const goals = user.goals || [];
+  const recentSessions = user.recentSessions || [];
+  const tasks = user.tasks || [];
+  const friends = user.friends || [];
+  const achievements = user.achievements || [];
+  const studyRooms = user.studyRooms || [];
 
   // Toggle task completion
   const toggleTaskCompletion = (id) => {
@@ -82,13 +154,13 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
   const addNewGoal = () => {
     const newGoal = {
       id: `goal_${goalList.length + 1}`,
-      title: "New Study Goal",
-      description: "Set your goal description",
+      title: 'New Study Goal',
+      description: 'Set your goal description',
       targetHours: 10,
       completedHours: 0,
       deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      status: "in-progress",
-      category: "General"
+      status: 'in-progress',
+      category: 'General',
     };
     setGoalList([...goalList, newGoal]);
   };
@@ -101,7 +173,6 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
       <Navbar />
-      
       {/* Main Dashboard */}
       <div className="max-w-7xl mx-auto px-4 pt-24 pb-12">
         {/* Profile Header */}
@@ -110,7 +181,7 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
             <div className="flex items-start gap-6">
               <div className="relative">
                 <img 
-                  src={user?.imageUrl || '/default-avatar.png'} 
+                  src={profile?.avatar || '/default-avatar.png'} 
                   alt="avatar" 
                   className="w-20 h-20 rounded-full border-4 border-green-400 shadow-md" 
                 />
@@ -118,10 +189,9 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
                   <span className="text-sm font-bold">{profile.level}</span>
                 </div>
               </div>
-              
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-3 mb-2">
-                  <h1 className="text-2xl font-bold text-gray-800">{user.firstName}</h1>
+                  <h1 className="text-2xl font-bold text-gray-800">{profile.name}</h1>
                   <div className="flex items-center gap-2">
                     <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold flex items-center">
                       <FaFire className="mr-1 text-orange-500" /> {profile.streak} day streak
@@ -131,9 +201,7 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
                     </div>
                   </div>
                 </div>
-                
                 <p className="text-gray-600 mb-4 text-sm">{profile.bio}</p>
-                
                 <div className="flex flex-wrap gap-4 text-xs text-gray-500">
                   <div className="flex items-center">
                     <span className="font-medium">Joined:</span>
@@ -151,13 +219,11 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
               </div>
             </div>
           </div>
-          
           <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl shadow-lg p-6 w-full lg:w-80 flex flex-col justify-center">
             <div className="text-white text-center mb-4">
               <div className="text-2xl font-bold">{formatMinutes(stats.totalStudyTime)}</div>
               <div className="text-sm opacity-80">Total Study Time</div>
             </div>
-            
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-white/20 rounded-lg p-2 text-center">
                 <div className="text-white font-bold">{formatMinutes(stats.weeklyStudyTime)}</div>
@@ -174,7 +240,6 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
             </div>
           </div>
         </div>
-        
         {/* Dashboard Tabs */}
         {/* Capsule Tab Selector */}
         <div className="flex justify-center mb-8">
@@ -205,56 +270,11 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
             </button>
           </div>
         </div>
-        
         {/* Overview Tab */}
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Tasks Section */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="font-bold text-lg flex items-center gap-2 text-gray-800">
-                  <FaTasks className="text-pink-500" /> Tasks
-                </h2>
-                <button className="text-gray-400 hover:text-gray-600">
-                  <FaEllipsisV />
-                </button>
-              </div>
-              
-              <div className="space-y-4">
-                {taskList.map(task => (
-                  <div 
-                    key={task.id} 
-                    className={`flex items-start p-3 rounded-lg ${task.completed ? 'bg-green-50' : 'bg-gray-50'}`}
-                  >
-                    <button 
-                      className={`mr-3 mt-1 w-5 h-5 flex items-center justify-center rounded-full border ${task.completed ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300'}`}
-                      onClick={() => toggleTaskCompletion(task.id)}
-                    >
-                      {task.completed && <FaCheckCircle size={12} />}
-                    </button>
-                    <div className="flex-1">
-                      <div className="flex justify-between">
-                        <span className={`font-medium ${task.completed ? 'line-through text-gray-400' : 'text-gray-700'}`}>
-                          {task.title}
-                        </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          task.priority === 'high' ? 'bg-red-100 text-red-800' :
-                          task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-blue-100 text-blue-800'
-                        }`}>
-                          {task.priority}
-                        </span>
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        <span>Due: {formatDate(task.dueDate)}</span> • 
-                        <span> Subject: {task.subject}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
+            <TasksSection taskList={taskList} setTaskList={setTaskList} />
             {/* Recent Sessions */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
               <div className="flex justify-between items-center mb-4">
@@ -265,7 +285,6 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
                   <FaEllipsisV />
                 </button>
               </div>
-              
               <div className="space-y-4">
                 {recentSessions.map(session => (
                   <div key={session.id} className="flex items-start p-3 bg-green-50 rounded-lg">
@@ -295,7 +314,6 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
                 ))}
               </div>
             </div>
-            
             {/* Study Rooms */}
             <div className="bg-white rounded-2xl shadow-lg p-6 lg:col-span-2">
               <div className="flex justify-between items-center mb-4">
@@ -306,7 +324,6 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
                   <FaEllipsisV />
                 </button>
               </div>
-              
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {studyRooms.map(room => (
                   <div 
@@ -317,17 +334,14 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
                       <h3 className="font-semibold text-gray-800">{room.name}</h3>
                       {room.favorite && <FaStar className="text-yellow-400" />}
                     </div>
-                    
                     <div className="flex items-center text-sm text-gray-600 mb-3">
                       <FaUserFriends className="mr-1" size={12} />
                       <span>{room.participants} participants</span>
                     </div>
-                    
                     <div className="text-xs text-gray-500 mb-4">
                       <div>Last active: {formatDateTime(room.lastActive)}</div>
                       <div>Sessions: {room.totalSessions}</div>
                     </div>
-                    
                     <button className="mt-auto w-full py-2 text-sm rounded-lg bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors flex items-center justify-center">
                       <FaDoorOpen className="mr-2" /> Join Room
                     </button>
@@ -337,7 +351,6 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
             </div>
           </div>
         )}
-        
         {/* Goals Tab */}
         {activeTab === 'goals' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -353,7 +366,6 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
                   <FaPlus size={12} /> Add Goal
                 </button>
               </div>
-              
               <div className="space-y-5">
                 {goalList.map(goal => (
                   <div 
@@ -369,9 +381,7 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
                         {goal.status}
                       </span>
                     </div>
-                    
                     <p className="text-sm text-gray-600 mb-3">{goal.description}</p>
-                    
                     <div className="flex flex-wrap gap-3 text-xs text-gray-500 mb-3">
                       <div className="flex items-center">
                         <span className="font-medium">Category:</span>
@@ -386,25 +396,22 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
                         <span className="ml-1">{goal.completedHours}h / {goal.targetHours}h</span>
                       </div>
                     </div>
-                    
                     <div className="w-full bg-gray-200 h-2 rounded-full mb-1">
                       <div 
                         className={`h-full rounded-full ${
-                          goal.completedHours / goal.targetHours > 0.75 ? 'bg-green-500' :
-                          goal.completedHours / goal.targetHours > 0.5 ? 'bg-blue-500' : 'bg-yellow-500'
+                          (goal.completedHours || 0) / (goal.targetHours || 1) > 0.75 ? 'bg-green-500' :
+                          (goal.completedHours || 0) / (goal.targetHours || 1) > 0.5 ? 'bg-blue-500' : 'bg-yellow-500'
                         }`} 
-                        style={{ width: `${Math.round((goal.completedHours / goal.targetHours) * 100)}%` }}
+                        style={{ width: `${Math.round(((goal.completedHours || 0) / (goal.targetHours || 1)) * 100)}%` }}
                       ></div>
                     </div>
-                    
                     <div className="text-right text-xs text-gray-500">
-                      {Math.round((goal.completedHours / goal.targetHours) * 100)}% Complete
+                      {Math.round(((goal.completedHours || 0) / (goal.targetHours || 1)) * 100)}% Complete
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-            
             <div className="bg-white rounded-2xl shadow-lg p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="font-bold text-lg flex items-center gap-2 text-gray-800">
@@ -414,17 +421,16 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
                   <FaEllipsisV />
                 </button>
               </div>
-              
               <div className="mb-6">
                 <h3 className="font-semibold text-gray-700 mb-2">Weekly Focus</h3>
                 <div className="bg-gray-100 rounded-lg p-4">
                   <div className="flex items-end h-24 gap-2">
-                    {stats.productivityTrend.map((day, index) => (
+                    {(stats.productivityTrend || []).map((day, index) => (
                       <div key={index} className="flex-1 flex flex-col items-center">
                         <div 
                           className="w-full bg-green-400 rounded-t-md hover:bg-green-500 transition-colors"
-                          style={{ height: `${(day.minutes / 180) * 100}%` }}
-                          title={`${day.minutes} minutes on ${formatDate(day.date)}`}
+                          style={{ height: `${((day.minutes || 0) / 180) * 100}%` }}
+                          title={`${day.minutes || 0} minutes on ${formatDate(day.date)}`}
                         ></div>
                         <div className="text-xs text-gray-500 mt-1">
                           {formatDate(day.date).split(' ')[1]}
@@ -434,17 +440,16 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
                   </div>
                 </div>
               </div>
-              
               <div>
                 <h3 className="font-semibold text-gray-700 mb-2">Subject Distribution</h3>
                 <div className="space-y-3">
-                  {Object.entries(stats.subjects).map(([subject, minutes]) => (
+                  {Object.entries(stats.subjects || {}).map(([subject, minutes]) => (
                     <div key={subject} className="flex items-center">
                       <div className="w-24 text-sm text-gray-600 truncate">{subject}</div>
                       <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden mx-2">
                         <div 
                           className="h-full bg-gradient-to-r from-green-400 to-blue-500"
-                          style={{ width: `${(minutes / stats.totalStudyTime) * 100}%` }}
+                          style={{ width: `${(minutes / (stats.totalStudyTime || 1)) * 100}%` }}
                         ></div>
                       </div>
                       <div className="w-16 text-right text-sm text-gray-700">
@@ -457,7 +462,6 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
             </div>
           </div>
         )}
-        
         {/* Community Tab */}
         {activeTab === 'community' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -470,7 +474,6 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
                   <FaEllipsisV />
                 </button>
               </div>
-              
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {friends.map(friend => (
                   <div 
@@ -490,7 +493,6 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
                           }`}
                         ></div>
                       </div>
-                      
                       <div className="ml-3 flex-1">
                         <div className="flex justify-between items-start">
                           <h3 className="font-semibold text-gray-800">{friend.name}</h3>
@@ -500,9 +502,7 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
                             </span>
                           )}
                         </div>
-                        
                         <p className="text-sm text-gray-600 mt-1">{friend.currentActivity}</p>
-                        
                         <div className="flex items-center text-xs text-gray-500 mt-2">
                           <div className="flex items-center mr-3">
                             <FaClock className="mr-1" size={10} />
@@ -515,7 +515,6 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
                         </div>
                       </div>
                     </div>
-                    
                     <button className="mt-3 w-full py-2 text-sm rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">
                       Message
                     </button>
@@ -523,7 +522,6 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
                 ))}
               </div>
             </div>
-            
             <div className="bg-white rounded-2xl shadow-lg p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="font-bold text-lg flex items-center gap-2 text-gray-800">
@@ -533,7 +531,6 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
                   <FaEllipsisV />
                 </button>
               </div>
-              
               <div className="space-y-4">
                 <div className="bg-indigo-50 rounded-xl p-4">
                   <div className="flex items-center justify-between mb-3">
@@ -549,7 +546,6 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
                     Create Room
                   </button>
                 </div>
-                
                 <div>
                   <h3 className="font-semibold text-gray-700 mb-3">Active Study Rooms</h3>
                   <div className="space-y-3">
@@ -576,7 +572,6 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
             </div>
           </div>
         )}
-        
         {/* Achievements Tab */}
         {activeTab === 'achievements' && (
           <div className="bg-white rounded-2xl shadow-lg p-6">
@@ -584,7 +579,6 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
               <h2 className="font-bold text-lg flex items-center gap-2 text-gray-800">
                 <FaTrophy className="text-amber-500" /> Achievements
               </h2>
-              
               <div className="flex gap-2">
                 <button 
                   className={`px-3 py-1 text-sm rounded-lg ${achievementFilter === 'all' ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-800'}`}
@@ -606,7 +600,6 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
                 </button>
               </div>
             </div>
-            
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {filteredAchievements.map(achievement => (
                 <div 
@@ -618,7 +611,6 @@ const { isLoaded, isSignedIn, user, userId, sessionId, getToken } = useUser()
                   <div className="text-4xl mb-3">{achievement.icon}</div>
                   <h3 className="font-semibold text-gray-800 mb-1">{achievement.title}</h3>
                   <p className="text-sm text-gray-600 mb-3">{achievement.description}</p>
-                  
                   {achievement.earned ? (
                     <div className="text-xs text-amber-600 font-medium">
                       Earned on {formatDate(achievement.dateEarned)}
