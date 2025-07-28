@@ -1,5 +1,5 @@
 import connectDB from '@/config/db';
-import User from '@/models/User';
+import User from '@/models/user';
 
 /**
  * Sync user data from Clerk to MongoDB

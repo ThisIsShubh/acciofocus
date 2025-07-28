@@ -123,7 +123,7 @@ export async function PUT(req) {
     // Update user in MongoDB
     const { getUserByClerkId } = await import('@/helpers/userSync');
     const { default: connectDB } = await import('@/config/db');
-    const { default: User } = await import('@/models/User');
+    const { default: User } = await import('@/models/user');
 
     await connectDB();
     

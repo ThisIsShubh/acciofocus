@@ -1,7 +1,7 @@
 // app/api/tasks/route.js
 import connectDB from '@/config/db';
 import { auth } from '@clerk/nextjs/server';
-import User from '@/models/User';
+import User from '@/models/user';
 import { v4 as uuidv4 } from 'uuid';
 
 // GET handler - Fetch all tasks for the authenticated user

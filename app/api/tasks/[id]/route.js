@@ -1,7 +1,7 @@
 // app/api/tasks/[id]/route.js - Update/Delete specific task
 import { auth } from '@clerk/nextjs/server';
 import connectDB from '@/config/db';
-import User from '@/models/User';
+import User from '@/models/user';
 
 // Helper function to get the task ID from the URL
 function getTaskId(url) {

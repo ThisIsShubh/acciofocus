@@ -5,6 +5,7 @@ import { FaCrown, FaCheckCircle, FaTrophy, FaUserFriends, FaStar, FaFire, FaBook
 import Navbar from '@/components/navbar';
 
 import TasksSection from '@/components/Tasks';
+import RecentSessions from '@/components/Sessions';
 
 function formatMinutes(mins) {
   const h = Math.floor(mins / 60);
@@ -276,44 +277,7 @@ export default function DashboardPage() {
             {/* Tasks Section */}
             <TasksSection taskList={taskList} setTaskList={setTaskList} />
             {/* Recent Sessions */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="font-bold text-lg flex items-center gap-2 text-gray-800">
-                  <FaClock className="text-blue-500" /> Recent Sessions
-                </h2>
-                <button className="text-gray-400 hover:text-gray-600">
-                  <FaEllipsisV />
-                </button>
-              </div>
-              <div className="space-y-4">
-                {recentSessions.map(session => (
-                  <div key={session.id} className="flex items-start p-3 bg-green-50 rounded-lg">
-                    <div className="mr-3 mt-1 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-blue-600">
-                      <FaBook size={14} />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between">
-                        <span className="font-medium text-gray-700">{session.subject}</span>
-                        <span className="text-xs text-gray-500">{formatDateTime(session.date)}</span>
-                      </div>
-                      <div className="flex items-center text-xs text-gray-500 mt-1">
-                        <span className="mr-3">Duration: {formatMinutes(session.duration)}</span>
-                        <div className="flex items-center">
-                          <span className="mr-1">Focus:</span>
-                          <div className="w-12 h-2 bg-gray-200 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-green-500" 
-                              style={{ width: `${session.focusScore}%` }}
-                            ></div>
-                          </div>
-                          <span className="ml-1">{session.focusScore}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <RecentSessions />
             {/* Study Rooms */}
             <div className="bg-white rounded-2xl shadow-lg p-6 lg:col-span-2">
               <div className="flex justify-between items-center mb-4">
