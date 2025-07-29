@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { FaPlus, FaCheck, FaEdit, FaTrash, FaTimes, FaEllipsisV, FaTasks, FaSpinner, FaChevronDown, FaChevronUp, FaSort } from "react-icons/fa";
+import { FaPlus, FaCheck, FaEdit, FaTrash, FaTimes, FaEllipsisV, FaTasks, FaSpinner, FaChevronDown, FaChevronUp } from "react-icons/fa";
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -10,7 +10,7 @@ export default function TaskList({
 }) {
   const [loading, setLoading] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
-  const [sortOption, setSortOption] = useState('creation');
+  const [sortOption, setSortOption] = useState('creationDate');
   const [sortDirection, setSortDirection] = useState('desc');
   const [showAddForm, setShowAddForm] = useState(false);
   const [taskForm, setTaskForm] = useState({
@@ -27,14 +27,7 @@ export default function TaskList({
       try {
         const response = await fetch('/api/tasks');
         const data = await response.json();
-        
-        // Add frontend creation timestamp for sorting since backend doesn't provide it
-        const tasksWithFrontendTimestamp = data.map(task => ({
-          ...task,
-          frontendCreatedAt: Date.now() // Add current timestamp
-        }));
-        
-        setTasks(tasksWithFrontendTimestamp);
+        setTasks(data);
       } catch (error) {
         console.error('Failed to fetch tasks:', error);
       } finally {
@@ -45,13 +38,13 @@ export default function TaskList({
     fetchTasks();
   }, []);
 
-  // Enhanced sorting logic that works without backend creation date
+  // Corrected sorting logic
   const sortedTasks = useMemo(() => {
     return [...tasks].sort((a, b) => {
-      // For dueDate
-      if (sortOption === 'dueDate') {
-        const aDate = new Date(a.dueDate).getTime();
-        const bDate = new Date(b.dueDate).getTime();
+      // For creationDate and dueDate, convert to timestamps
+      if (sortOption === 'creationDate' || sortOption === 'dueDate') {
+        const aDate = new Date(a[sortOption]).getTime();
+        const bDate = new Date(b[sortOption]).getTime();
         
         return sortDirection === 'asc' 
           ? aDate - bDate 
@@ -67,13 +60,6 @@ export default function TaskList({
         return sortDirection === 'asc' 
           ? aPriority - bPriority 
           : bPriority - aPriority;
-      }
-      
-      // For creation (using frontend timestamp)
-      if (sortOption === 'creation') {
-        return sortDirection === 'asc' 
-          ? a.frontendCreatedAt - b.frontendCreatedAt 
-          : b.frontendCreatedAt - a.frontendCreatedAt;
       }
       
       // Default to title sorting
@@ -125,7 +111,10 @@ export default function TaskList({
       const response = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(taskForm),
+        body: JSON.stringify({
+          ...taskForm,
+          createdAt: new Date().toISOString()
+        }),
       });
 
       if (!response.ok) {
@@ -134,15 +123,8 @@ export default function TaskList({
       }
 
       const createdTask = await response.json();
-      
-      // Add frontend timestamp for proper sorting
-      const taskWithTimestamp = {
-        ...createdTask,
-        frontendCreatedAt: Date.now()
-      };
-      
       // Add new task at the top
-      setTasks([taskWithTimestamp, ...tasks]);
+      setTasks([createdTask, ...tasks]);
       setTaskForm({
         title: '',
         subject: '',
@@ -220,7 +202,6 @@ export default function TaskList({
       let defaultDirection = 'desc';
       if (option === 'priority') defaultDirection = 'desc';
       if (option === 'title') defaultDirection = 'asc';
-      if (option === 'dueDate') defaultDirection = 'asc';
       
       setSortOption(option);
       setSortDirection(defaultDirection);
@@ -238,7 +219,7 @@ export default function TaskList({
     const names = {
       dueDate: 'Due Date',
       priority: 'Priority',
-      creation: 'Creation',
+      creationDate: 'Creation Date',
       title: 'Title'
     };
     
@@ -246,7 +227,7 @@ export default function TaskList({
   };
 
   return (
-    <div className="flex flex-col h-full mb-8">
+    <div className="flex flex-col h-full">
       <div className="flex justify-between items-center mb-4">
         <h2 className="font-bold text-lg flex items-center gap-2 text-gray-800">
           <FaTasks className="text-green-500" /> Tasks
@@ -256,28 +237,28 @@ export default function TaskList({
             onClick={() => setShowAddForm(!showAddForm)}
             className="text-green-500 hover:text-green-600 p-1 rounded flex items-center gap-1 text-sm"
           >
-            Add Task <FaPlus />
+            Add Task {showAddForm ? <FaChevronUp /> : <FaChevronDown />}
           </button>
           <div className="relative">
             <button 
               onClick={() => setShowSortMenu(!showSortMenu)}
               className="text-gray-500 hover:text-green-600 p-2 rounded-full hover:bg-green-50"
             >
-              <FaSort />
+              <FaEllipsisV />
             </button>
             
             {showSortMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 border border-gray-200">
                 <div className="px-4 py-2 text-xs text-gray-500 font-medium">Sort By</div>
                 <button
-                  onClick={() => handleSortSelect('creation')}
+                  onClick={() => handleSortSelect('creationDate')}
                   className={`block px-4 py-2 text-sm w-full text-left ${
-                    sortOption === 'creation' 
+                    sortOption === 'creationDate' 
                       ? 'bg-green-100 text-green-700' 
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  Creation
+                  Creation Date
                 </button>
                 <button
                   onClick={() => handleSortSelect('priority')}
@@ -368,7 +349,7 @@ export default function TaskList({
       )}
 
       {/* Task List */}
-      <ul className="flex-1 flex flex-col gap-3">
+      <ul className="flex-1 flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-2">
         {loading ? (
           <li className="flex justify-center py-4">
             <FaSpinner className="animate-spin text-green-500 text-2xl" />

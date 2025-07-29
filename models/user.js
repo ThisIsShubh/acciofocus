@@ -26,7 +26,8 @@ const TaskSchema = new mongoose.Schema({
   dueDate: Date,
   priority: String,
   completed: Boolean,
-  subject: String
+  subject: String,
+  createdAt: Date
 }, { _id: false });
 
 const GoalSchema = new mongoose.Schema({

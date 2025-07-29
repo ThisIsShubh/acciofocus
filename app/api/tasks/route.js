@@ -52,6 +52,7 @@ export async function POST(req) {
       subject: subject || '',
       priority: priority || 'medium',
       dueDate: dueDate ? new Date(dueDate) : new Date(),
+      createdAt: new Date(),
       completed: false
     };
 
