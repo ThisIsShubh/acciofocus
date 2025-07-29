@@ -184,7 +184,7 @@ export default function TasksSection({ taskList, setTaskList }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6">
+    <div className="bg-white max-h-[400px] rounded-2xl shadow-lg p-6 overflow-hidden">
       <div className="flex justify-between items-center mb-4">
         <h2 className="font-bold text-lg flex items-center gap-2 text-gray-800">
           <FaTasks className="text-pink-500" /> Tasks

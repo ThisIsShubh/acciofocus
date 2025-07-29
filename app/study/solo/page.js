@@ -99,7 +99,7 @@ ambientVolumes, setAmbientVolumes, audioRefs
 const {
 isRunning, setIsRunning, isBreak, setIsBreak, secondsLeft,
 setSecondsLeft,
-activeWorkDuration, setActiveWorkDuration, activeBreakDuration,
+activeWorkDuration, isPaused, setIsPaused, pauseTimer, resumeTimer, setActiveWorkDuration, activeBreakDuration,
 setActiveBreakDuration,
 pendingWorkDuration, setPendingWorkDuration, pendingBreakDuration,
 setPendingBreakDuration,
@@ -109,10 +109,16 @@ skipSession, resetTimer
 } = usePomodoro();
 
 // Task state
-const [tasks, setTasks] = useState([]);
 const [newTask, setNewTask] = useState("");
-const [editIdx, setEditIdx] = useState("");
-const [editText, setEditText] = useState("");
+  const [tasks, setTasks] = useState([]);
+  const [editIdx, setEditIdx] = useState(-1);
+  const [editText, setEditText] = useState("");
+  const [taskForm, setTaskForm] = useState({
+    title: '',
+    subject: '',
+    priority: 'medium',
+    dueDate: new Date().toISOString().split('T')[0]
+  });
 
 // Real-time clock
 useEffect(() => {
@@ -220,21 +226,52 @@ setEditText("");
 const min = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
 const sec = String(secondsLeft % 60).padStart(2, "0");
 
-// Fullscreen toggle on 'F' key
+// Fullscreen toggle on 'F' key and double-click
 useEffect(() => {
-const handleKeyDown = (e) => {
-if (e.key === 'f' || e.key === 'F') {
-const el = fullscreenRef.current;
-if (!el) return;
-if (document.fullscreenElement) {
-document.exitFullscreen();
-} else {
-el.requestFullscreen();
-}
-}
-};
-document.addEventListener('keydown', handleKeyDown);
-return () => document.removeEventListener('keydown', handleKeyDown);
+  const handleKeyDown = (e) => {
+    // Check if the pressed key is 'F' and not coming from any editable element
+     if ((e.key === 'f' || e.key === 'F') &&
+        !(e.target instanceof HTMLInputElement) &&
+        !(e.target instanceof HTMLTextAreaElement) &&
+        !(e.target instanceof HTMLSelectElement) &&
+        !e.target.isContentEditable) {
+
+      toggleFullscreen(e);
+    }
+  };
+
+  const handleDoubleClick = (e) => {
+    if (!(e.target instanceof HTMLInputElement) &&
+        !(e.target instanceof HTMLTextAreaElement) &&
+        !(e.target instanceof HTMLSelectElement) &&
+        !e.target.isContentEditable) {
+
+      toggleFullscreen(e);
+    }
+  };
+
+  const toggleFullscreen = (e) => {
+    const el = fullscreenRef.current;
+    if (!el) return;
+
+    e.preventDefault();
+
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      el.requestFullscreen().catch(err => {
+        console.error('Fullscreen error:', err);
+      });
+    }
+  };
+
+  document.addEventListener('keydown', handleKeyDown);
+  document.addEventListener('dblclick', handleDoubleClick);
+
+  return () => {
+    document.removeEventListener('keydown', handleKeyDown);
+    document.removeEventListener('dblclick', handleDoubleClick);
+  };
 }, []);
 
 // Play ting sound at end of session
@@ -248,9 +285,6 @@ tingRef.current.play();
 
 // Modified reset timer to handle session saving
 const handleResetTimer = async () => {
-if (sessionStartTimeRef.current && user && focusUnits > 0) {
-await saveSessionData();
-}
 resetTimer();
 sessionStartTimeRef.current = null;
 };
@@ -663,37 +697,33 @@ title="Task List"
 
 {/* Right Floating Menu */}
 <div
-ref={rightMenuRef}
-className={`fixed top-0 right-0 h-full z-80 transform transition-all duration-300 ease-in-out 
-${rightMenuOpen ? "translate-x-0" : "translate-x-full"}`}
->
-<div className="h-full w-80 p-6 flex flex-col gap-6 bg-white text-black backdrop-blur-lg overflow-y-auto custom-scrollbar shadow-2xl" style={{ maxHeight: '100vh' }}>
-<div className="flex justify-between items-center mb-2">
-<h2 className="text-xl font-bold">Session Tasks</h2>
-<button
-className="p-2 rounded-full hover:bg-black/10"
-onClick={() => setRightMenuOpen(false)}
->
-<FaTimes className="text-lg" />
-</button>
-</div>
-{/* Task input form is now handled inside TaskList component */}
-<TaskList
-tasks={tasks}
-newTask={newTask}
-editIdx={editIdx}
-editText={editText}
-setNewTask={setNewTask}
-handleAddTask={handleAddTask}
-handleToggleTask={handleToggleTask}
-handleDeleteTask={handleDeleteTask}
-handleEditTask={handleEditTask}
-handleSaveEdit={handleSaveEdit}
-handleCancelEdit={handleCancelEdit}
-setEditText={setEditText}
-/>
-</div>
-</div>
+        ref={rightMenuRef}
+        className={`fixed top-0 right-0 h-full z-80 transform transition-all duration-300 ease-in-out 
+        ${rightMenuOpen ? "translate-x-0" : "translate-x-full"}`}
+      >
+        <div className="h-full w-80 p-6 flex flex-col gap-6 bg-white text-black backdrop-blur-lg overflow-y-auto custom-scrollbar shadow-2xl" style={{ maxHeight: '100vh' }}>
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-xl font-bold">Session Tasks</h2>
+            <button
+              className="p-2 rounded-full hover:bg-black/10"
+              onClick={() => setRightMenuOpen(false)}
+            >
+              <FaTimes className="text-lg" />
+            </button>
+          </div>
+          
+          <TaskList
+            tasks={tasks}
+            setTasks={setTasks}
+            newTask={taskForm}
+            setNewTask={setTaskForm}
+            editIdx={editIdx}
+            setEditIdx={setEditIdx}
+            editText={editText}
+            setEditText={setEditText}
+          />
+        </div>
+      </div>
 
 {/* Top Right Controls: Back Button & Sound Control */}
 <div className="fixed top-4 right-4 z-40 flex flex-row-reverse gap-4">
@@ -742,34 +772,45 @@ setYoutubeVolume(prevYoutubeVolume.current);
 
 {/* Timer Controls */}
 <div className="flex gap-4">
-{!isRunning ? (
-<button
-className="px-8 py-3 bg-green-500 text-white rounded-full font-bold shadow-lg hover:bg-green-600 transition flex items-center"
-onClick={() => setIsRunning(true)}
->
-<FaPlay className="mr-2" /> Start
-</button>
-) : (
-<button
-className="px-8 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-full font-bold shadow-lg hover:from-amber-600 hover:to-orange-600 transition flex items-center"
-onClick={() => setIsRunning(false)}
->
-<FaPause className="mr-2" /> Pause
-</button>
-)}
-<button
-className="px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-full font-bold shadow-lg transition flex items-center"
-onClick={skipSession}
->
-<FaStepForward />
-</button>
-<button
-className="px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-full font-bold shadow-lg transition flex items-center"
-onClick={handleResetTimer}
-disabled={isSavingSession}
->
-<FaRedo />
-</button>
+  {!isRunning ? (
+    <button
+      className="px-8 py-3 bg-green-500 text-white rounded-full font-bold shadow-lg hover:bg-green-600 transition flex items-center"
+      onClick={() => {
+        setIsRunning(true);
+        if (isPaused) {
+          resumeTimer();
+        }
+      }}
+    >
+      <FaPlay className="mr-2" /> {isPaused ? 'Resume' : 'Start'}
+    </button>
+  ) : (
+    <button
+      className="px-8 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-full font-bold shadow-lg hover:from-amber-600 hover:to-orange-600 transition flex items-center"
+      onClick={pauseTimer}
+    >
+      <FaPause className="mr-2"/> Pause
+    </button>
+  )}
+  
+  <button
+    className="px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-full font-bold shadow-lg transition flex items-center"
+    onClick={skipSession}
+    disabled={isPaused} // Optional: disable skip while paused
+  >
+    <FaStepForward />
+  </button>
+  
+  <button
+    className="px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-full font-bold shadow-lg transition flex items-center"
+    onClick={() => {
+      handleResetTimer();
+      setIsPaused(false); // Ensure pause state is reset
+    }}
+    disabled={isSavingSession}
+  >
+    <FaRedo />
+  </button>
 </div>
 
 {/* Status Bar */}

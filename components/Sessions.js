@@ -181,7 +181,7 @@ title="Refresh"
 <FaEllipsisV />
 </button>
 </div>
-<div className="space-y-4 max-h-96 overflow-y-auto">
+<div className="space-y-4 max-h-[300px] overflow-y-auto">
 {sessions.map(session => (
 <div key={session.id} className="flex items-start p-3 bg-green-50 rounded-lg hover:bg-green-100 transition">
 <div className="mr-3 mt-1 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-blue-600 flex-shrink-0">
