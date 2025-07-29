@@ -359,12 +359,6 @@ export default function TasksSection({ taskList, setTaskList }) {
             No tasks yet. Add your first task!
           </div>
         )}
-        
-        {taskList.length > 5 && (
-          <div className="text-center py-2 text-sm text-gray-500">
-            Showing 5 of {taskList.length} tasks. Scroll to see more.
-          </div>
-        )}
       </div>
     </div>
   );

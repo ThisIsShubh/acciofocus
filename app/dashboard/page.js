@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { FaCrown, FaCheckCircle, FaTrophy, FaUserFriends, FaStar, FaFire, FaBook, FaClock, FaChartLine, FaTasks, FaMedal, FaUsers, FaDoorOpen, FaEllipsisV, FaPlus } from 'react-icons/fa';
 import Navbar from '@/components/navbar';
 
-import TasksSection from '@/components/Tasks';
-import RecentSessions from '@/components/Sessions';
+import TasksSection from '@/components/dashboard/Tasks';
+import RecentSessions from '@/components/dashboard/Sessions';
+import StudyStats from '@/components/dashboard/StudyStats';
 
 function formatMinutes(mins) {
   const h = Math.floor(mins / 60);
@@ -220,26 +221,7 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-          <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl shadow-lg p-6 w-full lg:w-80 flex flex-col justify-center">
-            <div className="text-white text-center mb-4">
-              <div className="text-2xl font-bold">{formatMinutes(stats.totalStudyTime)}</div>
-              <div className="text-sm opacity-80">Total Study Time</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-white/20 rounded-lg p-2 text-center">
-                <div className="text-white font-bold">{formatMinutes(stats.weeklyStudyTime)}</div>
-                <div className="text-white text-xs opacity-80">Weekly</div>
-              </div>
-              <div className="bg-white/20 rounded-lg p-2 text-center">
-                <div className="text-white font-bold">{formatMinutes(stats.dailyAverage)}</div>
-                <div className="text-white text-xs opacity-80">Daily Avg</div>
-              </div>
-              <div className="bg-white/20 rounded-lg p-2 text-center">
-                <div className="text-white font-bold">{stats.sessionsCompleted}</div>
-                <div className="text-white text-xs opacity-80">Sessions</div>
-              </div>
-            </div>
-          </div>
+          <StudyStats recentSessions={user.recentSessions} />
         </div>
         {/* Dashboard Tabs */}
         {/* Capsule Tab Selector */}
@@ -252,10 +234,10 @@ export default function DashboardPage() {
               Overview
             </button>
             <button
-              className={`flex-1 px-6 py-2 font-semibold rounded-full transition-all duration-150 text-sm ${activeTab === 'goals' ? 'bg-green-500 text-white shadow' : 'text-gray-600 hover:bg-green-100'}`}
-              onClick={() => setActiveTab('goals')}
+              className={`flex-1 px-6 py-2 font-semibold rounded-full transition-all duration-150 text-sm ${activeTab === 'stats' ? 'bg-green-500 text-white shadow' : 'text-gray-600 hover:bg-green-100'}`}
+              onClick={() => setActiveTab('stats')}
             >
-              Goals
+              Stats
             </button>
             <button
               className={`flex-1 px-6 py-2 font-semibold rounded-full transition-all duration-150 text-sm ${activeTab === 'community' ? 'bg-green-500 text-white shadow' : 'text-gray-600 hover:bg-green-100'}`}
@@ -315,8 +297,8 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
-        {/* Goals Tab */}
-        {activeTab === 'goals' && (
+        {/* Stats Tab */}
+        {activeTab === 'stats' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white rounded-2xl shadow-lg p-6">
               <div className="flex justify-between items-center mb-4">
