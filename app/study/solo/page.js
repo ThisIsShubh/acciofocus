@@ -166,7 +166,7 @@ export default function SoloStudyPage() {
                 body: JSON.stringify(sessionData),
             });
 
-             
+
 
             if (!response.ok) {
                 throw new Error('Failed to save session');
@@ -194,9 +194,49 @@ export default function SoloStudyPage() {
         sessionStartTimeRef.current = null;
     };
 
+    // Handle tab close or reload
+    useEffect(() => {
+        const handleBeforeUnload = (e) => {
+            if (!user || !sessionStartTimeRef.current || focusUnits < 1) return;
+
+            const sessionEndTime = new Date();
+            const sessionDuration = Math.round((sessionEndTime - sessionStartTimeRef.current) / 1000 / 60);
+            const activeSounds = sounds.filter(s => ambientVolumes[s] > 0.01);
+
+            const sessionData = {
+                date: sessionStartTimeRef.current,
+                duration: sessionDuration,
+                subject: sessionSubject,
+                focusScore: focusUnits,
+                environment: {
+                    background: youtubeBg || bg,
+                    sounds: activeSounds,
+                    mode: "solo",
+                    roomName: "Solo Study"
+                },
+                userId: user.id // You’ll need this on the API side
+            };
+
+            // Send data to a lightweight endpoint that supports beacon
+            navigator.sendBeacon('/api/sessions/beacon', JSON.stringify(sessionData));
+
+            // Optional: cancel the unload if needed
+            // e.preventDefault();
+            // e.returnValue = '';
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [user, sessionSubject, focusUnits, youtubeBg, bg, ambientVolumes]);
+
     // Timer formatting
     const min = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
     const sec = String(secondsLeft % 60).padStart(2, "0");
+
+
 
     // Fullscreen toggle on 'F' key and double-click
     useEffect(() => {

@@ -1,7 +1,7 @@
 // /api/user.js
 import { auth } from "@clerk/nextjs/server";
 import connectDB from "@/config/db";
-import User from "@/models/User";
+import User from "@/models/user";
 
 export async function GET(req) {
   const authResult = auth();
@@ -26,3 +26,5 @@ export async function GET(req) {
     return new Response(JSON.stringify({ error: "Server error", details: err.message }), { status: 500 });
   }
 }
+
+

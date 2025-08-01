@@ -63,6 +63,7 @@ export async function GET() {
 
     // Return user data (excluding sensitive information)
     const userData = {
+      profile:user.profile,
       id: user.profile.id,
       name: user.profile.name,
       email: user.profile.email,

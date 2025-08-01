@@ -7,6 +7,8 @@ import Navbar from '@/components/navbar';
 import TasksSection from '@/components/dashboard/Tasks';
 import RecentSessions from '@/components/dashboard/Sessions';
 import StudyStats from '@/components/dashboard/StudyStats';
+import PageLoader from '@/components/Loader';
+import Profile from '@/components/dashboard/Profile';
 
 function formatMinutes(mins) {
   const h = Math.floor(mins / 60);
@@ -54,7 +56,7 @@ export default function DashboardPage() {
             'Content-Type': 'application/json',
           },
         });
-        
+        console.log('Response received from /api/user/me', res);
         console.log('Response status:', res.status);
         console.log('Response headers:', Object.fromEntries(res.headers.entries()));
         
@@ -97,7 +99,14 @@ export default function DashboardPage() {
       </div>
     </div>
   );
-  
+
+  if (loading) return (
+    <PageLoader 
+      message="Loading your dashboard..." 
+      className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center"
+    />
+  );
+
   if (!user) return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
       <div className="text-center max-w-md mx-auto p-6">
@@ -113,20 +122,6 @@ export default function DashboardPage() {
       </div>
     </div>
   );
-
-  // Extract data from the flattened user object returned by /api/user/me
-  const profile = {
-    name: user.name || 'Anonymous User',
-    email: user.email || '',
-    avatar: user.avatar || '',
-    joinDate: user.joinDate || new Date(),
-    lastActive: user.lastActive || new Date(),
-    streak: user.streak || 0,
-    level: user.level || 1,
-    xp: user.xp || 0,
-    nextLevelXp: user.nextLevelXp || 100,
-    bio: user.bio || ''
-  };
   
   // Safely destructure with default values
   const stats = user.stats || {
@@ -144,13 +139,6 @@ export default function DashboardPage() {
   const friends = user.friends || [];
   const achievements = user.achievements || [];
   const studyRooms = user.studyRooms || [];
-
-  // Toggle task completion
-  const toggleTaskCompletion = (id) => {
-    setTaskList(taskList.map(task => 
-      task.id === id ? { ...task, completed: !task.completed } : task
-    ));
-  };
 
   // Add new goal
   const addNewGoal = () => {
@@ -171,7 +159,7 @@ export default function DashboardPage() {
   const filteredAchievements = achievementFilter === 'all' 
     ? achievements 
     : achievements.filter(a => achievementFilter === 'earned' ? a.earned : !a.earned);
-
+  console.log("chadalmod :              ===============================================",user.profile);
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
       <Navbar />
@@ -180,46 +168,10 @@ export default function DashboardPage() {
         {/* Profile Header */}
         <div className="flex flex-col lg:flex-row gap-6 mb-8">
           <div className="bg-white rounded-2xl shadow-lg p-6 flex-1">
-            <div className="flex items-start gap-6">
-              <div className="relative">
-                <img 
-                  src={profile?.avatar || '/default-avatar.png'} 
-                  alt="avatar" 
-                  className="w-20 h-20 rounded-full border-4 border-green-400 shadow-md" 
-                />
-                <div className="absolute -top-1 -right-1 bg-green-500 text-white w-8 h-8 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-bold">{profile.level}</span>
-                </div>
-              </div>
-              <div className="flex-1">
-                <div className="flex flex-wrap items-center gap-3 mb-2">
-                  <h1 className="text-2xl font-bold text-gray-800">{profile.name}</h1>
-                  <div className="flex items-center gap-2">
-                    <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold flex items-center">
-                      <FaFire className="mr-1 text-orange-500" /> {profile.streak} day streak
-                    </div>
-                    <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">
-                      XP: {profile.xp}/{profile.nextLevelXp}
-                    </div>
-                  </div>
-                </div>
-                <p className="text-gray-600 mb-4 text-sm">{profile.bio}</p>
-                <div className="flex flex-wrap gap-4 text-xs text-gray-500">
-                  <div className="flex items-center">
-                    <span className="font-medium">Joined:</span>
-                    <span className="ml-1">{formatDate(profile.joinDate)}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="font-medium">Last Active:</span>
-                    <span className="ml-1">{formatDateTime(profile.lastActive)}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="font-medium">Email:</span>
-                    <span className="ml-1">{profile.email}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <Profile 
+              profile={user.profile} 
+              onEditBio={bio => setUser(prev => ({ ...prev, profile: { ...prev.profile, bio } }))} 
+            />
           </div>
           <StudyStats recentSessions={user.recentSessions} />
         </div>
