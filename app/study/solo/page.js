@@ -218,7 +218,7 @@ export default function SoloStudyPage() {
             };
 
             // Send data to a lightweight endpoint that supports beacon
-            navigator.sendBeacon('/api/sessions/beacon', JSON.stringify(sessionData));
+            navigator.sendBeacon('/api/sessions', JSON.stringify(sessionData));
 
             // Optional: cancel the unload if needed
             // e.preventDefault();
