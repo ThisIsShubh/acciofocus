@@ -43,14 +43,14 @@ const Profile = ({ profile, onEditBio = () => {} }) => {
 
   return (
     <div className="max-w-3xl mx-auto bg-white">
-      <div className="flex gap-4 items-start">
+      <div className="flex gap-6 items-start">
         {/* Avatar with Level Badge */}
         <div className="relative flex-shrink-0">
           <div className="relative">
             <img
               src={profile?.avatar || '/default-avatar.png'}
               alt="avatar"
-              className="w-16 h-16 rounded-full border-2 border-green-500 shadow-md"
+              className="w-16 h-16 rounded-full border-4 border-green-500 shadow-md"
             />
           </div>
                     {/* Last Active */}
@@ -72,12 +72,12 @@ const Profile = ({ profile, onEditBio = () => {} }) => {
             <div className="flex gap-2">
               <div className="flex items-center gap-1 bg-gradient-to-r from-amber-400 to-orange-500 text-white px-2.5 py-0.5 rounded-full text-xs font-medium">
                 <FaFire className="text-xs" />
-                <span>{profile?.streak}</span>
+                <span>Streak {profile?.streak}</span>
               </div>
               
               <div className="flex items-center gap-1 bg-gradient-to-r from-green-400 to-emerald-500 text-white px-2.5 py-0.5 rounded-full text-xs font-medium">
                 <FaStar className="text-xs" />
-                <span>{profile?.xp}</span>
+                <span>Level {profile?.level}</span>
               </div>
             </div>
           </div>
@@ -104,7 +104,7 @@ const Profile = ({ profile, onEditBio = () => {} }) => {
                   value={newBio}
                   onChange={(e) => setNewBio(e.target.value)}
                   placeholder="What motivates you today?"
-                  className="w-full p-3 text-sm border border-blue-200 rounded-xl focus:ring-1 focus:ring-blue-400 focus:border-blue-400 min-h-[80px]"
+                  className="w-full p-3 text-sm border border-green-200 rounded-xl focus:ring-1 focus:ring-green-400 focus:border-green-400 min-h-[80px]"
                   autoFocus
                 />
                 <div className="flex justify-end gap-2 mt-2">
@@ -116,7 +116,7 @@ const Profile = ({ profile, onEditBio = () => {} }) => {
                   </button>
                   <button
                     onClick={handleSaveBio}
-                    className="px-3 py-1.5 text-xs bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+                    className="px-3 py-1.5 text-xs bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
                   >
                     Save
                   </button>
@@ -124,25 +124,25 @@ const Profile = ({ profile, onEditBio = () => {} }) => {
               </div>
             ) : profile?.bio ? (
               <div 
-                className="relative bg-blue-50 rounded-lg p-3 text-gray-700 text-sm cursor-pointer hover:bg-blue-100 transition group"
+                className="relative bg-green-50 rounded-lg p-3 text-gray-700 text-sm cursor-pointer hover:bg-green-100 transition group"
                 onClick={() => setEditingBio(true)}
               >
-                <FaQuoteLeft className="text-blue-200 absolute top-3 left-3 text-lg" />
+                <FaQuoteLeft className="text-green-200 absolute top-3 left-3 text-lg" />
                 <div className="pl-6 pr-4 py-1 italic">
                   {profile.bio}
                 </div>
                 <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <FaEdit className="text-blue-400 text-xs" />
+                  <FaEdit className="text-green-400 text-xs" />
                 </div>
               </div>
             ) : (
               <div 
-                className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-blue-300 cursor-pointer transition"
+                className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-green-300 cursor-pointer transition"
                 onClick={() => setEditingBio(true)}
               >
                 <div className="flex flex-col items-center">
-                  <div className="bg-blue-100 w-8 h-8 rounded-full flex items-center justify-center mb-1">
-                    <FaEdit className="text-blue-500" />
+                  <div className="bg-green-100 w-8 h-8 rounded-full flex items-center justify-center mb-1">
+                    <FaEdit className="text-green-500" />
                   </div>
                   <span className="text-xs text-gray-500 font-medium">Add your motivation</span>
                 </div>
