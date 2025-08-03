@@ -48,29 +48,87 @@ focusScore: Number(sessionData.focusScore) || 0,
 environment
 };
 
-// Add to sessions array (not recentSessions to match schema)
+
+// --- Streak Logic ---
+// Fetch user to get recentSessions and streak
+const user = await User.findOne({ 'profile.id': userId });
+if (!user) {
+  return new Response(JSON.stringify({ error: 'User not found' }), {
+    status: 404,
+    headers: { 'Content-Type': 'application/json' }
+  });
+}
+
+let streak = user.profile.streak || 0;
+let lastStreakUpdate = user.profile.lastStreakUpdate ? new Date(user.profile.lastStreakUpdate) : null;
+const today = new Date();
+today.setHours(0,0,0,0);
+
+// Find the most recent session date (excluding the one being added)
+let lastSessionDate = null;
+if (user.recentSessions && user.recentSessions.length > 0) {
+  // Sort sessions by date descending
+  const sorted = [...user.recentSessions].sort((a, b) => new Date(b.date) - new Date(a.date));
+  lastSessionDate = new Date(sorted[0].date);
+  lastSessionDate.setHours(0,0,0,0);
+}
+
+// Only update streak if not already updated today
+let shouldUpdateStreak = true;
+if (lastStreakUpdate) {
+  const lastUpdateDay = new Date(lastStreakUpdate);
+  lastUpdateDay.setHours(0,0,0,0);
+  if (lastUpdateDay.getTime() === today.getTime()) {
+    shouldUpdateStreak = false;
+  }
+}
+
+let newStreak = streak;
+if (shouldUpdateStreak) {
+  if (lastSessionDate) {
+    const diffDays = Math.floor((today - lastSessionDate) / (1000 * 60 * 60 * 24));
+    if (diffDays === 1) {
+      newStreak = streak + 1;
+    } else if (diffDays === 0) {
+      // Already counted today, do not increment
+      newStreak = streak;
+    } else {
+      newStreak = 1; // Reset streak
+    }
+  } else {
+    newStreak = 1; // First session ever
+  }
+}
+
+// Add to sessions and update streak/lastActive/lastStreakUpdate
+const updateFields = {
+  $push: { recentSessions: newSession },
+  $set: {
+    'profile.lastActive': new Date(),
+    ...(shouldUpdateStreak ? { 'profile.streak': newStreak, 'profile.lastStreakUpdate': today } : {})
+  }
+};
+
 const result = await User.findOneAndUpdate(
-{ 'profile.id': userId },
-{ 
-$push: { recentSessions: newSession },
-$set: { 'profile.lastActive': new Date() }
-},
-{ new: true, upsert: true }
+  { 'profile.id': userId },
+  updateFields,
+  { new: true, upsert: true }
 );
 
 if (!result) {
-return new Response(JSON.stringify({ error: 'Failed to save session' }), {
-status: 500,
-headers: { 'Content-Type': 'application/json' }
-});
+  return new Response(JSON.stringify({ error: 'Failed to save session' }), {
+    status: 500,
+    headers: { 'Content-Type': 'application/json' }
+  });
 }
 
 return new Response(JSON.stringify({ 
-message: 'Session saved successfully',
-session: newSession
+  message: 'Session saved successfully',
+  session: newSession,
+  streak: result.profile.streak
 }), { 
-status: 200,
-headers: { 'Content-Type': 'application/json' }
+  status: 200,
+  headers: { 'Content-Type': 'application/json' }
 });
 
 } catch (error) {

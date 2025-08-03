@@ -75,6 +75,7 @@ const UserSchema = new mongoose.Schema({
     joinDate: Date,
     lastActive: Date,
     streak: Number,
+    lastStreakUpdate: Date,
     level: Number,
     xp: Number,
     nextLevelXp: Number,
