@@ -1,7 +1,7 @@
 // components/dashboard/TasksSection.js
 'use client';
 import React, { useState, useMemo } from 'react';
-import { FaTasks, FaCheckCircle, FaEllipsisV, FaPlus, FaTrash } from 'react-icons/fa';
+import { FaTasks, FaChevronDown, FaChevronUp, FaCheckCircle, FaEllipsisV, FaPlus, FaTrash } from 'react-icons/fa';
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -19,6 +19,8 @@ export default function TasksSection({ taskList, setTaskList }) {
     priority: 'medium',
     dueDate: new Date().toISOString().split('T')[0]
   });
+  const [expanded, setExpanded] = useState(false);
+  const maxVisibleTasks = 4;
 
   // Sort tasks based on selected option
   const sortedTasks = useMemo(() => {
@@ -47,8 +49,15 @@ export default function TasksSection({ taskList, setTaskList }) {
     });
   }, [taskList, sortOption, sortDirection]);
 
-  // // Only display first 5 tasks - scroll for the rest
-  // const displayedTasks = sortedTasks.slice(0, 5);
+    // Toggle expanded view
+  const toggleExpanded = () => {
+    setExpanded(!expanded);
+  };
+
+    // Calculate tasks to show
+  const displayedTasks = useMemo(() => {
+    return expanded ? sortedTasks : sortedTasks.slice(0, maxVisibleTasks);
+  }, [sortedTasks, expanded]);
 
   // Toggle task completion with database update
   const toggleTaskCompletion = async (taskId) => {
@@ -184,7 +193,7 @@ export default function TasksSection({ taskList, setTaskList }) {
   };
 
   return (
-    <div className="bg-white max-h-[400px] rounded-2xl shadow-lg p-6 overflow-hidden">
+    <div className="bg-white rounded-2xl shadow-lg p-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="font-bold text-lg flex items-center gap-2 text-gray-800">
           <FaTasks className="text-pink-500" /> Tasks
@@ -303,8 +312,8 @@ export default function TasksSection({ taskList, setTaskList }) {
         </form>
       )}
 
-      <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
-        {sortedTasks.map(task => (
+      <div className="space-y-4">
+        {displayedTasks.map(task => (
           <div
             key={task.id}
             className={`flex items-start p-3 rounded-lg ${
@@ -358,6 +367,25 @@ export default function TasksSection({ taskList, setTaskList }) {
           <div className="text-center py-4 text-gray-500">
             No tasks yet. Add your first task!
           </div>
+        )}
+
+        {taskList.length > maxVisibleTasks && (
+          <button
+            onClick={toggleExpanded}
+            className="flex items-center justify-center w-full py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            {expanded ? (
+              <>
+                <FaChevronUp className="mr-2" />
+                Show Less
+              </>
+            ) : (
+              <>
+                <FaChevronDown className="mr-2" />
+                Show All ({taskList.length})
+              </>
+            )}
+          </button>
         )}
       </div>
     </div>

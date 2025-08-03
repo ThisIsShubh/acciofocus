@@ -13,7 +13,7 @@ import {
 
 const NAV_ITEMS = [
   { label: "Solo Study", href: "/study/solo" },
-  { label: "Rooms", href: "/rooms" },
+  { label: "Rooms", href: "/study/room" },
   { label: "About", href: "/about" },
   { label: "Contact", href: "/contact" },
 ];
