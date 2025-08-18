@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     FaUsers, FaPlus, FaSearch, FaFilter, FaEye, FaEyeSlash,
-    FaLock, FaUnlock, FaCrown, FaStar, FaCalendarAlt, FaClock,
+    FaLock, FaUnlock, FaCrown, FaStar, FaInfoCircle, FaCalendarAlt, FaClock,
     FaUserFriends, FaChartLine, FaDoorOpen, FaEdit, FaTrash,
     FaShare, FaCopy, FaHeart, FaFire, FaBookmark, FaTimes,
     FaCheck, FaExclamationTriangle, FaSpinner, FaEllipsisV, FaCheckCircle,
@@ -11,7 +11,7 @@ import {
 import Navbar from '@/components/navbar';
 import PageLoader from '@/components/Loader';
 import Link from 'next/link';
-import {useRouter} from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/react'
 
 function formatDateTime(dateStr) {
@@ -397,8 +397,8 @@ export default function StudyRoomsPage() {
                     <div className="flex bg-green-100 rounded-full shadow-inner p-1 gap-1">
                         <button
                             className={`px-6 py-2 font-semibold rounded-full transition-all duration-150 text-sm ${activeTab === 'my-rooms'
-                                    ? 'bg-green-500 text-white shadow'
-                                    : 'text-gray-600 hover:bg-green-100'
+                                ? 'bg-green-500 text-white shadow'
+                                : 'text-gray-600 hover:bg-green-100'
                                 }`}
                             onClick={() => setActiveTab('my-rooms')}
                         >
@@ -406,8 +406,8 @@ export default function StudyRoomsPage() {
                         </button>
                         <button
                             className={`px-6 py-2 font-semibold rounded-full transition-all duration-150 text-sm ${activeTab === 'discover'
-                                    ? 'bg-green-500 text-white shadow'
-                                    : 'text-gray-600 hover:bg-green-100'
+                                ? 'bg-green-500 text-white shadow'
+                                : 'text-gray-600 hover:bg-green-100'
                                 }`}
                             onClick={() => setActiveTab('discover')}
                         >
@@ -441,49 +441,49 @@ export default function StudyRoomsPage() {
                 </div>
 
                 {/* Empty State */}
-{((activeTab === 'my-rooms' && filterRooms(myRooms).length === 0) ||
-  (activeTab === 'discover' && filterRooms(discoverRooms).length === 0)) && (
-    <div className="flex flex-col items-center justify-center px-4 max-w-md mx-auto">
-      <div className="relative mb-6">
-        <div className="w-40 h-40 rounded-full bg-gray-100 flex items-center justify-center">
-          <img src="/16.png" alt="Empty State" className="w-40 h-40" />
-        </div>
-        <div className="absolute -bottom-2 -right-2 bg-white p-2 rounded-full shadow-sm">
-          <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-            <FaPlus className="text-green-500 text-xs" />
-          </div>
-        </div>
-      </div>
-      
-      <h3 className="text-xl font-semibold text-gray-800 mb-2 text-center">
-        {activeTab === 'my-rooms' 
-          ? 'You have not joined any rooms yet' 
-          : 'No public rooms available'}
-      </h3>
-      <p className="text-gray-500 text-center mb-8 max-w-sm">
-        {activeTab === 'my-rooms'
-          ? 'Start collaborating by creating your own room or discovering existing ones.'
-          : 'Be the pioneer! Create the first public room in your community.'
-        }
-      </p>
-      <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition-colors shadow-sm hover:shadow-md flex items-center justify-center gap-2 flex-1 sm:flex-none"
-        >
-          <FaPlus /> Create Your First Room
-        </button>
-        {activeTab === 'my-rooms' && (
-          <button
-            onClick={() => setActiveTab('discover')}
-            className="border border-gray-300 hover:border-gray-400 text-gray-700 px-6 py-3 rounded-lg transition-colors shadow-sm hover:shadow-md flex-1 sm:flex-none"
-          >
-            Discover Rooms
-          </button>
-        )}
-      </div>
-    </div>
-)}
+                {((activeTab === 'my-rooms' && filterRooms(myRooms).length === 0) ||
+                    (activeTab === 'discover' && filterRooms(discoverRooms).length === 0)) && (
+                        <div className="flex flex-col items-center justify-center px-4 max-w-md mx-auto">
+                            <div className="relative mb-6">
+                                <div className="w-40 h-40 rounded-full bg-gray-100 flex items-center justify-center">
+                                    <img src="/16.png" alt="Empty State" className="w-40 h-40" />
+                                </div>
+                                <div className="absolute -bottom-2 -right-2 bg-white p-2 rounded-full shadow-sm">
+                                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                                        <FaPlus className="text-green-500 text-xs" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h3 className="text-xl font-semibold text-gray-800 mb-2 text-center">
+                                {activeTab === 'my-rooms'
+                                    ? 'You have not joined any rooms yet'
+                                    : 'No public rooms available'}
+                            </h3>
+                            <p className="text-gray-500 text-center mb-8 max-w-sm">
+                                {activeTab === 'my-rooms'
+                                    ? 'Start collaborating by creating your own room or discovering existing ones.'
+                                    : 'Be the pioneer! Create the first public room in your community.'
+                                }
+                            </p>
+                            <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
+                                <button
+                                    onClick={() => setShowCreateModal(true)}
+                                    className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition-colors shadow-sm hover:shadow-md flex items-center justify-center gap-2 flex-1 sm:flex-none"
+                                >
+                                    <FaPlus /> Create Your First Room
+                                </button>
+                                {activeTab === 'my-rooms' && (
+                                    <button
+                                        onClick={() => setActiveTab('discover')}
+                                        className="border border-gray-300 hover:border-gray-400 text-gray-700 px-6 py-3 rounded-lg transition-colors shadow-sm hover:shadow-md flex-1 sm:flex-none"
+                                    >
+                                        Discover Rooms
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
             </div>
 
             {/* Create Room Modal */}
@@ -606,7 +606,7 @@ function RoomCard({ room, isMyRoom, onToggleFavorite, onLeave, onJoin, onCopyKey
             {/* Action Button */}
             {isMyRoom ? (
                 <Link className="w-full py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium flex items-center justify-center gap-2"
-                key={room.id}
+                    key={room.id}
                     href={`/study/room/${room.id}`}>
                     <FaDoorOpen /> Enter Room
                 </Link>
@@ -624,116 +624,160 @@ function RoomCard({ room, isMyRoom, onToggleFavorite, onLeave, onJoin, onCopyKey
 
 // Create Room Modal Component
 function CreateRoomModal({ newRoom, setNewRoom, onClose, onCreate, loading }) {
+    const categories = [
+        "General", "Mathematics", "Science", 
+        "Language", "Programming", "Test Prep"
+    ];
+
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-gray-800">Create Study Room</h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-md h-[90vh] w-full overflow-y-auto p-6 relative z-[1001] animate-fade-in-up">
+                {/* Header */}
+                <div className="flex justify-between items-start mb-6">
+                    <div>
+                        <h2 className="text-2xl font-bold text-gray-900">Create Study Room</h2>
+                        <p className="text-sm text-gray-500 mt-1">Set up your perfect study environment</p>
+                    </div>
                     <button
                         onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 p-1"
+                        className="text-gray-400 hover:text-gray-600 p-1 transition-colors"
+                        aria-label="Close modal"
                     >
-                        <FaTimes />
+                        <FaTimes className="w-5 h-5" />
                     </button>
                 </div>
 
-                <div className="space-y-4">
+                {/* Form */}
+                <div className="space-y-5">
+                    {/* Room Name */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Room Name *
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center">
+                            Room Name <span className="text-red-500 ml-1">*</span>
                         </label>
                         <input
                             type="text"
                             value={newRoom.name}
                             onChange={(e) => setNewRoom(prev => ({ ...prev, name: e.target.value }))}
-                            placeholder="Enter room name"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                            placeholder="e.g. Advanced Calculus Study Group"
+                            className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                            maxLength={60}
                         />
+                        <p className="text-xs text-gray-400 mt-1 text-right">{newRoom.name.length}/60</p>
                     </div>
 
+                    {/* Description */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
                             Description
                         </label>
                         <textarea
                             value={newRoom.description}
                             onChange={(e) => setNewRoom(prev => ({ ...prev, description: e.target.value }))}
-                            placeholder="Describe your study room"
+                            placeholder="What will you be studying? Any special rules?"
                             rows={3}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                            className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                         />
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Category
-                        </label>
-                        <select
-                            value={newRoom.category}
-                            onChange={(e) => setNewRoom(prev => ({ ...prev, category: e.target.value }))}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        >
-                            <option value="General">General</option>
-                            <option value="Mathematics">Mathematics</option>
-                            <option value="Science">Science</option>
-                            <option value="Language">Language</option>
-                            <option value="Programming">Programming</option>
-                            <option value="Test Prep">Test Prep</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Max Participants
-                        </label>
-                        <input
-                            type="number"
-                            value={newRoom.maxParticipants}
-                            onChange={(e) => setNewRoom(prev => ({ ...prev, maxParticipants: parseInt(e.target.value) }))}
-                            min="2"
-                            max="50"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        />
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                        <input
-                            type="checkbox"
-                            id="isPrivate"
-                            checked={newRoom.isPrivate}
-                            onChange={(e) => setNewRoom(prev => ({ ...prev, isPrivate: e.target.checked }))}
-                            className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                        />
-                        <label htmlFor="isPrivate" className="text-sm text-gray-700 flex items-center gap-2">
-                            <FaLock className="text-gray-500" />
-                            Make this room private
-                        </label>
-                    </div>
-
-                    {newRoom.isPrivate && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                            <div className="flex items-center gap-2 text-yellow-800 text-sm">
-                                <FaExclamationTriangle />
-                                <span>Private rooms require a key to join. You'll receive a unique key after creation.</span>
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* Categories */}
+                        <div className="col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                Category
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                                {categories.map((category) => (
+                                    <button
+                                        key={category}
+                                        type="button"
+                                        onClick={() => setNewRoom(prev => ({ ...prev, category }))}
+                                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all 
+                                            ${newRoom.category === category 
+                                                ? 'bg-green-500 text-white shadow-md'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                                    >
+                                        {category}
+                                    </button>
+                                ))}
                             </div>
                         </div>
-                    )}
+
+                        {/* Max Participants */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                Max Participants
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type="number"
+                                    value={newRoom.maxParticipants}
+                                    onChange={(e) => setNewRoom(prev => ({ ...prev, maxParticipants: parseInt(e.target.value) || 2 }))}
+                                    min="2"
+                                    max="50"
+                                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Privacy Toggle */}
+                    <div className="pt-2">
+                        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                            <label htmlFor="isPrivate" className="flex items-center gap-3 cursor-pointer w-full">
+                                <div className="relative">
+                                    <input
+                                        type="checkbox"
+                                        id="isPrivate"
+                                        checked={newRoom.isPrivate}
+                                        onChange={(e) => setNewRoom(prev => ({ ...prev, isPrivate: e.target.checked }))}
+                                        className="sr-only peer"
+                                    />
+                                    <div className="w-10 h-6 bg-gray-200 rounded-full peer peer-checked:bg-green-500 transition-colors">
+                                        <div className="absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4"></div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <FaLock className="text-gray-500" />
+                                    <span className="text-sm text-gray-700">Private room</span>
+                                </div>
+                            </label>
+                        </div>
+
+                        {newRoom.isPrivate && (
+                            <div className="mt-3 bg-blue-50 border border-blue-100 rounded-lg p-3 flex items-start gap-2">
+                                <FaInfoCircle className="text-blue-500 mt-0.5 flex-shrink-0" />
+                                <span className="text-sm text-blue-800">
+                                    Private rooms require an invitation key. You'll receive a unique key after creation.
+                                </span>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
-                <div className="flex gap-3 mt-6">
+                {/* Actions */}
+                <div className="flex gap-3 mt-8">
                     <button
                         onClick={onClose}
-                        className="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                        className="flex-1 py-3 px-4 border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
                     >
                         Cancel
                     </button>
                     <button
                         onClick={onCreate}
                         disabled={!newRoom.name.trim() || loading}
-                        className="flex-1 py-2 px-4 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        className="flex-1 py-3 px-4 bg-gradient-to-r from-green-500 to-green-600 text-white font-medium rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
                     >
-                        {loading ? <FaSpinner className="animate-spin" /> : <FaPlus />}
-                        {loading ? 'Creating...' : 'Create Room'}
+                        {loading ? (
+                            <>
+                                <FaSpinner className="animate-spin" />
+                                Creating...
+                            </>
+                        ) : (
+                            <>
+                                <FaPlus />
+                                Create Room
+                            </>
+                        )}
                     </button>
                 </div>
             </div>
@@ -744,8 +788,8 @@ function CreateRoomModal({ newRoom, setNewRoom, onClose, onCreate, loading }) {
 // Join Room Modal Component
 function JoinRoomModal({ roomKey, setRoomKey, onClose, onJoin, loading }) {
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black/60 transition-opacity duration-200 z-[1000] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative z-[1001]">
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-xl font-bold text-gray-800">Join Private Room</h2>
                     <button
