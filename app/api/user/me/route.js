@@ -5,10 +5,10 @@ import { getUserByClerkId, updateUserLastActive } from '@/helpers/userSync';
 export async function GET() {
   try {
     console.log('=== /api/user/me GET request ===');
-    
+
     const authResult = await auth();
     console.log('Auth result:', authResult);
-    
+
     const { userId } = authResult;
     console.log('Extracted userId:', userId);
 
@@ -30,7 +30,7 @@ export async function GET() {
       // Try to create user if they don't exist (fallback for users who signed up before webhook was set up)
       try {
         const { syncUserToMongoDB } = await import('@/helpers/userSync');
-        
+
         console.log('Getting current user from Clerk...');
         const clerkUser = await currentUser();
         console.log('Clerk user data:', clerkUser ? {
@@ -38,7 +38,7 @@ export async function GET() {
           email: clerkUser.emailAddresses?.[0]?.emailAddress,
           name: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim()
         } : 'No clerk user found');
-        
+
         if (clerkUser) {
           user = await syncUserToMongoDB(clerkUser);
           console.log('User created via fallback mechanism:', user.profile.id);
@@ -89,6 +89,76 @@ export async function GET() {
     } catch (syncErr) {
       console.error('Error syncing Clerk profile on GET /api/user/me:', syncErr);
       // continue without failing the request
+    }
+
+    // --- Stats Backfill Logic ---
+    // Check if user has sessions but no total study time (indicates missing stats)
+    if (user.recentSessions && user.recentSessions.length > 0) {
+      const currentStats = user.stats || {};
+
+      if (!currentStats.totalStudyTime) {
+        console.log('Detected sessions but missing stats. Recalculating...');
+
+        const newStats = {
+          totalStudyTime: 0,
+          weeklyStudyTime: 0,
+          dailyAverage: 0,
+          sessionsCompleted: 0,
+          focusRate: 0,
+          subjects: {},
+          productivityTrend: [],
+          roomsCreated: currentStats.roomsCreated || 0,
+          roomsJoined: currentStats.roomsJoined || 0,
+          collaborativeHours: currentStats.collaborativeHours || 0
+        };
+
+        const trendMap = new Map(); // date string (YYYY-MM-DD) -> minutes
+
+        user.recentSessions.forEach(session => {
+          const duration = session.duration || 0;
+          newStats.totalStudyTime += duration;
+          newStats.sessionsCompleted += 1;
+
+          // Subjects
+          if (session.subject) {
+            const safeSubject = session.subject.replace(/\./g, '_');
+            newStats.subjects[safeSubject] = (newStats.subjects[safeSubject] || 0) + duration;
+          }
+
+          // Trend
+          if (session.date) {
+            const dateObj = new Date(session.date);
+            if (!isNaN(dateObj)) {
+              const dateKey = dateObj.toISOString().split('T')[0];
+              trendMap.set(dateKey, (trendMap.get(dateKey) || 0) + duration);
+            }
+          }
+        });
+
+        // Convert trend map to array
+        newStats.productivityTrend = Array.from(trendMap.entries())
+          .map(([date, minutes]) => ({
+            date: new Date(date),
+            minutes
+          }))
+          .sort((a, b) => a.date - b.date);
+
+        // Update user in DB
+        try {
+          const { default: User } = await import('@/models/user');
+          const { default: connectDB } = await import('@/config/db');
+          await connectDB();
+
+          user = await User.findOneAndUpdate(
+            { 'profile.id': userId },
+            { $set: { stats: newStats } },
+            { new: true }
+          );
+          console.log('Stats successfully recalculated and saved.');
+        } catch (dbErr) {
+          console.error('Failed to update recalculated stats:', dbErr);
+        }
+      }
     }
 
     // Update last active timestamp
@@ -172,7 +242,7 @@ export async function PUT(req) {
     const { default: User } = await import('@/models/user');
 
     await connectDB();
-    
+
     const updatedUser = await User.findOneAndUpdate(
       { 'profile.id': userId },
       { $set: updateData },

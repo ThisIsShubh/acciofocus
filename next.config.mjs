@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
+// Force restart
 const nextConfig = {
-    allowedDevOrigins: [
+  allowedDevOrigins: [
     'http://192.168.56.1',
     'https://192.168.56.1',
     'http://localhost:3000',

@@ -22,14 +22,17 @@ const RecentSessions = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('Fetching sessions from /api/sessions...');
 
       const response = await fetch('/api/sessions');
+      console.log('Fetch sessions response status:', response.status);
 
       if (!response.ok) {
         throw new Error('Failed to fetch sessions');
       }
 
       const data = await response.json();
+      console.log('Sessions received:', data);
       setSessions(data);
     } catch (err) {
       console.error('Error fetching sessions:', err);
@@ -82,7 +85,7 @@ const RecentSessions = () => {
   const getSoundIcons = (sounds) => {
     const soundIcons = {
       rain: "🌧",
-      cafe: "☕", 
+      cafe: "☕",
       forest: "🌲",
       fireplace: "🔥",
       ocean: "🌊",
@@ -146,7 +149,7 @@ const RecentSessions = () => {
         <div className="text-center py-8 text-red-500">
           <FaExclamationTriangle className="text-4xl mb-3 mx-auto" />
           <p>Failed to load sessions</p>
-          <button 
+          <button
             onClick={fetchSessions}
             className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
           >
@@ -182,7 +185,7 @@ const RecentSessions = () => {
         <h2 className="font-bold text-lg flex items-center gap-2 text-gray-800">
           <FaClock className="text-blue-500" /> Recent Sessions
         </h2>
-        <button 
+        <button
           onClick={fetchSessions}
           className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition"
           title="Refresh"
@@ -190,7 +193,7 @@ const RecentSessions = () => {
           <FaEllipsisV />
         </button>
       </div>
-      
+
       <div className="space-y-4">
         {displayedSessions.map(session => (
           <div key={session.id} className="flex items-start p-3 bg-gray-50 rounded-lg hover:bg-green-50 transition">

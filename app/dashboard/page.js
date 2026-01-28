@@ -2,6 +2,10 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { FaCrown, FaCheckCircle, FaTrophy, FaUserFriends, FaStar, FaFire, FaBook, FaClock, FaChartLine, FaTasks, FaMedal, FaUsers, FaDoorOpen, FaEllipsisV, FaPlus } from 'react-icons/fa';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend, CartesianGrid
+} from 'recharts';
 import Navbar from '@/components/navbar';
 import Image from 'next/image';
 
@@ -19,6 +23,31 @@ function formatMinutes(mins) {
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function getWeeklyData(trendData = []) {
+  const days = [];
+  const today = new Date();
+
+  // Create array for last 7 days
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    d.setHours(0, 0, 0, 0);
+
+    // Find matching data
+    const existingDay = trendData.find(item => {
+      const itemDate = new Date(item.date);
+      itemDate.setHours(0, 0, 0, 0);
+      return itemDate.getTime() === d.getTime();
+    });
+
+    days.push({
+      date: d.toISOString(),
+      minutes: existingDay ? existingDay.minutes : 0
+    });
+  }
+  return days;
 }
 
 function formatDateTime(dateStr) {
@@ -368,44 +397,126 @@ export default function DashboardPage() {
                   <FaEllipsisV />
                 </button>
               </div>
-              <div className="mb-6">
-                <h3 className="font-semibold text-gray-700 mb-2">Weekly Focus</h3>
-                <div className="bg-gray-100 rounded-lg p-4">
-                  <div className="flex items-end h-24 gap-2">
-                    {(stats.productivityTrend || []).map((day, index) => (
-                      <div key={index} className="flex-1 flex flex-col items-center">
-                        <div
-                          className="w-full bg-green-400 rounded-t-md hover:bg-green-500 transition-colors"
-                          style={{ height: `${((day.minutes || 0) / 180) * 100}%` }}
-                          title={`${day.minutes || 0} minutes on ${formatDate(day.date)}`}
-                        ></div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {formatDate(day.date).split(' ')[1]}
+
+              {/* Empty State */}
+              {!stats.totalStudyTime ? (
+                <div className="flex flex-col items-center justify-center h-64 text-gray-400 rounded-xl bg-gray-50 border-2 border-dashed border-gray-200">
+                  <FaChartLine size={48} className="mb-3 opacity-50" />
+                  <p className="font-medium">No study data yet</p>
+                  <p className="text-sm">Complete your first session to see insights!</p>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-8">
+                    <h3 className="font-semibold text-gray-700 mb-4 flex items-center">
+                      Weekly Focus
+                      <span className="ml-2 text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full">Last 7 Days</span>
+                    </h3>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={getWeeklyData(stats.productivityTrend)}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                          <XAxis
+                            dataKey="date"
+                            tickFormatter={(date) => new Date(date).toLocaleDateString('en-US', { weekday: 'short' })}
+                            tick={{ fontSize: 12, fill: '#6B7280' }}
+                            axisLine={false}
+                            tickLine={false}
+                            dy={10}
+                          />
+                          <YAxis
+                            hide={false}
+                            fontSize={12}
+                            tickSize={0}
+                            axisLine={false}
+                            tick={{ fill: '#9CA3AF' }}
+                            width={30}
+                          />
+                          <Tooltip
+                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                            labelFormatter={(date) => new Date(date).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+                            formatter={(value) => [`${value} mins`, 'Study Time']}
+                            cursor={{ fill: '#F3F4F6', radius: 4 }}
+                          />
+                          <Bar
+                            dataKey="minutes"
+                            fill="#4ade80"
+                            radius={[6, 6, 0, 0]}
+                            barSize={32}
+                            activeBar={{ fill: '#22c55e' }}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-gray-700 mb-2">Subject Distribution</h3>
+                    <div className="flex flex-col md:flex-row items-center">
+                      <div className="w-full md:w-1/2 h-56 relative">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={Object.entries(stats.subjects || {}).map(([name, value]) => ({ name, value }))}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={60}
+                              outerRadius={80}
+                              paddingAngle={4}
+                              dataKey="value"
+                            >
+                              {Object.entries(stats.subjects || {}).map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={[
+                                  '#4ade80', '#60a5fa', '#f472b6', '#fbbf24', '#a78bfa', '#818cf8', '#34d399'
+                                ][index % 7]} strokeWidth={0} />
+                              ))}
+                            </Pie>
+                            <Tooltip
+                              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                              formatter={(value) => [`${value} mins`, 'Duration']}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        {/* Center Text */}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                          <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Total</span>
+                          <span className="text-xl font-bold text-gray-700">{formatMinutes(stats.totalStudyTime)}</span>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-700 mb-2">Subject Distribution</h3>
-                <div className="space-y-3">
-                  {Object.entries(stats.subjects || {}).map(([subject, minutes]) => (
-                    <div key={subject} className="flex items-center">
-                      <div className="w-24 text-sm text-gray-600 truncate">{subject}</div>
-                      <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden mx-2">
-                        <div
-                          className="h-full bg-gradient-to-r from-green-400 to-blue-500"
-                          style={{ width: `${(minutes / (stats.totalStudyTime || 1)) * 100}%` }}
-                        ></div>
-                      </div>
-                      <div className="w-16 text-right text-sm text-gray-700">
-                        {formatMinutes(minutes)}
+
+                      {/* Custom Legend */}
+                      <div className="w-full md:w-1/2 space-y-3 mt-4 md:mt-0 pl-0 md:pl-6">
+                        {Object.entries(stats.subjects || {})
+                          .sort(([, a], [, b]) => b - a) // Sort by time descending
+                          .slice(0, 5) // Top 5
+                          .map(([subject, minutes], index) => {
+                            const percentage = Math.round((minutes / (stats.totalStudyTime || 1)) * 100);
+                            return (
+                              <div key={subject} className="flex items-center justify-between text-sm group">
+                                <div className="flex items-center gap-3 overflow-hidden">
+                                  <div
+                                    className="w-3 h-3 rounded-full flex-shrink-0"
+                                    style={{ backgroundColor: ['#4ade80', '#60a5fa', '#f472b6', '#fbbf24', '#a78bfa', '#818cf8', '#34d399'][index % 7] }}
+                                  ></div>
+                                  <span className="font-medium text-gray-700 truncate group-hover:text-gray-900 transition-colors">{subject}</span>
+                                </div>
+                                <div className="flex items-center gap-3 text-gray-500 text-xs text-right">
+                                  <span className="bg-gray-100 px-2 py-0.5 rounded-full font-medium">{percentage}%</span>
+                                  <span className="w-16 tabular-nums">{formatMinutes(minutes)}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        {Object.keys(stats.subjects || {}).length > 5 && (
+                          <div className="text-center text-xs text-gray-400 mt-2 italic">
+                            + {Object.keys(stats.subjects).length - 5} more subjects
+                          </div>
+                        )}
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
