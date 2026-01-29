@@ -302,7 +302,7 @@ export default function StudyRoomsPage() {
                         <div className="">
                             <div className="flex flex-col lg:flex-row items-center justify-center gap-4">
                                 {/* Search Box */}
-                                <div className="relative flex-1">
+                                <div className="relative w-full lg:flex-1">
                                     <FaSearch className="z-5 absolute top-1/2 right-4 -translate-y-1/2 text-white pointer-events-none" />
                                     <input
                                         type="text"
@@ -314,10 +314,10 @@ export default function StudyRoomsPage() {
                                 </div>
 
                                 {/* Filter and Sort Controls */}
-                                <div className="flex h-full gap-3">
+                                <div className="flex h-full w-full lg:w-auto gap-3">
                                     <Listbox value={filterBy} onChange={setFilterBy}>
                                         <div className="relative h-full">
-                                            <ListboxButton className="relative min-w-[120px] w-full h-full cursor-default rounded-lg bg-white border border-gray-300 py-2 pl-4 pr-10 text-left shadow-sm text-sm text-black focus:outline-none focus:ring-2 focus:ring-green-500">
+                                            <ListboxButton className="relative min-w-[120px] w-auto h-full cursor-default rounded-lg bg-white border border-gray-300 py-2 pl-4 pr-10 text-left shadow-sm text-sm text-black focus:outline-none focus:ring-2 focus:ring-green-500 whitespace-nowrap">
                                                 {filters.find(f => f.value === filterBy)?.name}
                                                 <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
                                                     <FaFilter className="h-4 w-4 text-gray-400" />
@@ -353,7 +353,7 @@ export default function StudyRoomsPage() {
 
                                     <Listbox value={sortBy} onChange={setSortBy}>
                                         <div className="relative">
-                                            <ListboxButton className="relative h-full w-full min-w-[120px] text-black cursor-default rounded-lg bg-white border border-gray-300 py-2 pl-4 pr-10 text-left shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                                            <ListboxButton className="relative h-full w-auto min-w-[120px] text-black cursor-default rounded-lg bg-white border border-gray-300 py-2 pl-4 pr-10 text-left shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-500 whitespace-nowrap">
                                                 {sortOptions.find(f => f.value === sortBy)?.name}
                                                 <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
                                                     <FaFilter className="h-4 w-4 text-black" />
@@ -626,7 +626,7 @@ function RoomCard({ room, isMyRoom, onToggleFavorite, onLeave, onJoin, onCopyKey
 // Create Room Modal Component
 function CreateRoomModal({ newRoom, setNewRoom, onClose, onCreate, loading }) {
     const categories = [
-        "General", "Mathematics", "Science", 
+        "General", "Mathematics", "Science",
         "Language", "Programming", "Test Prep"
     ];
 
@@ -693,7 +693,7 @@ function CreateRoomModal({ newRoom, setNewRoom, onClose, onCreate, loading }) {
                                         type="button"
                                         onClick={() => setNewRoom(prev => ({ ...prev, category }))}
                                         className={`px-4 py-2 rounded-full text-sm font-medium transition-all 
-                                            ${newRoom.category === category 
+                                            ${newRoom.category === category
                                                 ? 'bg-green-500 text-white shadow-md'
                                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                                     >
