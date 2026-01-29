@@ -1,15 +1,16 @@
 'use client';
-import React, { useEffect, useState, useRef } from 'react';
-import io from 'socket.io-client';
-import { FaPaperPlane, FaUserCircle } from 'react-icons/fa';
+import { useState, useEffect, useRef } from 'react';
+import Pusher from 'pusher-js';
+import { FaPaperPlane } from 'react-icons/fa';
 
 export default function Chat({ roomId, user, onParticipantsUpdate }) {
-    const [socket, setSocket] = useState(null);
     const [messages, setMessages] = useState([]);
-    const [participants, setParticipants] = useState([]);
     const [input, setInput] = useState('');
+    const [participants, setParticipants] = useState([]);
+    const [isConnected, setIsConnected] = useState(false);
     const messagesEndRef = useRef(null);
-    const hasJoined = useRef(false);
+    const pusherRef = useRef(null);
+    const channelRef = useRef(null);
 
     useEffect(() => {
         if (onParticipantsUpdate) {
@@ -17,95 +18,76 @@ export default function Chat({ roomId, user, onParticipantsUpdate }) {
         }
     }, [participants, onParticipantsUpdate]);
 
-    const isInitializing = useRef(false);
-
     useEffect(() => {
-        // Init Check: User needed? (optional, but good for auth). RoomId DEFINITELY needed.
-        if (!user || !roomId) {
-            console.log("Chat: Waiting for user/roomId...", { user: !!user, roomId });
-            return;
-        }
+        if (!roomId || !user) return;
 
-        // Guard: One-time initialization per valid session
-        if (socket) return;
-        if (isInitializing.current) return;
-        isInitializing.current = true;
+        // Prevent double initialization
+        if (pusherRef.current) return;
 
-        const socketInitializer = async () => {
-            try {
-                // This triggers the API route to start the Socket.io server if needed
-                await fetch('/api/socket/io');
-            } catch (e) {
-                console.error('Socket init request failed', e);
+        // Pusher.logToConsole = true; // Uncomment for debugging
+
+        const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY, {
+            cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
+            authEndpoint: '/api/pusher/auth',
+            auth: {
+                params: {
+                    username: user.name,
+                    user_id: user.id || user._id, // Ensure ID is passed
+                    avatar: user.avatar
+                }
             }
+        });
 
-            const newSocket = io({
-                path: '/api/socket/io',
-                addTrailingSlash: false,
-                reconnectionAttempts: 5,
-            });
+        pusherRef.current = pusher;
 
-            newSocket.on('connect_error', (err) => {
-                console.error('Socket connection error:', err);
-            });
+        const channelName = `presence-room-${roomId}`;
+        const channel = pusher.subscribe(channelName);
+        channelRef.current = channel;
 
-            newSocket.on('server-debug-info', (data) => {
-                console.log('socket connected with server:', data);
-                console.log('Current Room ID:', roomId); // This closes over current roomId
-            });
+        // Connection Events
+        channel.bind('pusher:subscription_succeeded', (members) => {
+            setIsConnected(true);
+            const initialMembers = [];
+            members.each((member) => initialMembers.push(member.info));
+            setParticipants(initialMembers);
+        });
 
-            newSocket.on('connect', () => {
-                console.log('Connected to socket');
-                // Join immediately on connect
-                newSocket.emit('join-room', {
-                    roomId, // Uses the roomId from closure (guaranteed not null by check above)
-                    user: {
-                        id: user.id || 'anon',
-                        name: user.name || 'Anonymous',
-                        avatar: user.avatar
-                    }
-                });
-            });
+        channel.bind('pusher:member_added', (member) => {
+            setParticipants((prev) => [...prev, member.info]);
+            setMessages((prev) => [...prev, {
+                system: true,
+                text: `${member.info.name} joined the room`
+            }]);
+        });
 
-            newSocket.on('message-history', (history) => {
-                console.log('CLIENT: Received history:', history);
-                setMessages(history);
-            });
+        channel.bind('pusher:member_removed', (member) => {
+            setParticipants((prev) => prev.filter((p) => p.name !== member.info.name)); // Using name as ID fallback if needed
+            setMessages((prev) => [...prev, {
+                system: true,
+                text: `${member.info.name} left the room`
+            }]);
+        });
 
-            newSocket.on('receive-message', (message) => {
-                console.log('CLIENT: Received message:', message);
-                setMessages((prev) => [...prev, message]);
-
-                // Auto scroll
-                setTimeout(() => {
-                    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-                }, 100);
-            });
-
-            newSocket.on('update-participants', (users) => {
-                console.log('SOCKET: Received update-participants:', users);
-                setParticipants(users);
-                if (onParticipantsUpdate) onParticipantsUpdate(users);
-            });
-
-            setSocket(newSocket);
-        };
-
-        socketInitializer();
+        // Chat Events
+        channel.bind('message', (data) => {
+            setMessages((prev) => [...prev, data]);
+            setTimeout(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        });
 
         return () => {
-            // Optional: Disconnect on unmount? 
-            // setSocket(null); isInitializing.current = false;
+            if (pusherRef.current) {
+                pusherRef.current.unsubscribe(channelName);
+                pusherRef.current.disconnect();
+                pusherRef.current = null;
+            }
         };
-    }, [roomId, user]); // Re-run if these change (e.g. from null to value)
+    }, [roomId, user]);
 
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
-
-    const sendMessage = (e) => {
+    const sendMessage = async (e) => {
         e.preventDefault();
-        if (!input.trim() || !socket) return;
+        if (!input.trim()) return;
 
         const messageData = {
             roomId,
@@ -114,35 +96,47 @@ export default function Chat({ roomId, user, onParticipantsUpdate }) {
                 name: user?.name || 'Anonymous',
                 avatar: user?.avatar,
             },
-            timestamp: new Date().toISOString(),
         };
 
-        console.log("CLIENT: Sending message:", messageData);
-        socket.emit('send-message', messageData);
-        // We don't optimistic update here to avoid duplication if server echoes back, 
-        // OR we can optimistic update and filter duplicates. 
-        // Simpler: Strict Socket.io pattern -> emit, server broadcasts to all including sender.
-        // But for better latency feeling:
-        setMessages((prev) => [...prev, messageData]);
-        setInput('');
+        try {
+            await fetch('/api/pusher/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(messageData),
+            });
+            setInput('');
+        } catch (error) {
+            console.error('Failed to send message:', error);
+        }
     };
-
-    // Deduping identical messages (crude protection against strict mode double-renders or echo)
-    // Actually, simply relying on unique IDs is better, but for now we'll trust the flow.
 
     return (
         <div className="flex flex-col h-full bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
 
             {/* Connection Status */}
-            {!socket && (
+            {!isConnected && (
                 <div className="bg-yellow-50 text-yellow-700 text-xs px-4 py-1 flex items-center justify-center">
-                    Connecting to chat...
+                    Connecting to secure channel...
+                </div>
+            )}
+
+            {/* Participant List (Mini) */}
+            {participants.length > 0 && (
+                <div className="bg-emerald-50 px-4 py-2 flex gap-2 overflow-x-auto border-b border-emerald-100 no-scrollbar">
+                    {participants.map((p, idx) => (
+                        <div key={idx} className="flex items-center gap-1 bg-white px-2 py-1 rounded-full border border-emerald-100 shadow-sm flex-shrink-0">
+                            <div className="w-4 h-4 rounded-full bg-emerald-200 flex items-center justify-center text-[10px] text-emerald-800 font-bold overflow-hidden">
+                                {p.avatar ? <img src={p.avatar} alt={p.name} className="w-full h-full object-cover" /> : p.name?.[0]}
+                            </div>
+                            <span className="text-xs text-emerald-900 truncate max-w-[80px]">{p.name}</span>
+                        </div>
+                    ))}
                 </div>
             )}
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50 scroll-smooth">
-                {messages.length === 0 && socket && (
+                {messages.length === 0 && isConnected && (
                     <div className="text-center text-gray-400 text-sm mt-10">
                         No messages yet. Say hello! 👋
                     </div>
@@ -177,7 +171,7 @@ export default function Chat({ roomId, user, onParticipantsUpdate }) {
                                     }`}>
                                     {msg.message}
                                     <div className={`text-[9px] mt-1 flex justify-end opacity-70 ${isMe ? 'text-emerald-100' : 'text-gray-400'}`}>
-                                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                                     </div>
                                 </div>
                             </div>
@@ -193,13 +187,13 @@ export default function Chat({ roomId, user, onParticipantsUpdate }) {
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder={socket ? "Type a message..." : "Connecting..."}
-                    disabled={!socket}
+                    placeholder={isConnected ? "Type a message..." : "Connecting..."}
+                    disabled={!isConnected}
                     className="flex-1 px-4 py-2.5 rounded-full bg-gray-50 border border-gray-200 focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-sm outline-none placeholder:text-gray-400"
                 />
                 <button
                     type="submit"
-                    disabled={!input.trim() || !socket}
+                    disabled={!input.trim() || !isConnected}
                     className="p-2.5 bg-emerald-600 text-white rounded-full hover:bg-emerald-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md"
                 >
                     <FaPaperPlane size={14} className="ml-0.5" />
