@@ -59,6 +59,7 @@ export default function Chat({ roomId, user, onParticipantsUpdate }) {
             });
 
             newSocket.on('update-participants', (users) => {
+                console.log("SOCKET: Received update-participants:", users);
                 setParticipants(users);
             });
 

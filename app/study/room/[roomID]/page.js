@@ -126,6 +126,17 @@ export default function StudyRoomPage() {
       .catch(err => console.error("Failed to load user for room", err));
   }, []);
 
+  // Construct chat identity (prefer DB profile, fallback to Clerk)
+  const chatIdentity = React.useMemo(() => {
+    if (userProfile) return userProfile;
+    if (user) return {
+      id: user.id,
+      name: user.fullName || user.username || "Anonymous",
+      avatar: user.imageUrl
+    };
+    return null;
+  }, [userProfile, user]);
+
 
   const {
     youtubeUrl, setYoutubeUrl, youtubeBg, setYoutubeBg, youtubeVolume,
@@ -192,23 +203,35 @@ export default function StudyRoomPage() {
 
   // Merge DB members with real-time participants
   const mergedMembers = React.useMemo(() => {
+    // DEBUG LOGS
+    console.log("MERGE: dbMembers count:", dbMembers.length, dbMembers);
+    console.log("MERGE: participants count:", participants.length, participants);
+
     // Create a map of online users for quick lookup
     const onlineMap = new Map(participants.map(p => [p.userId || p.id, p]));
 
     // Start with DB members
-    const all = [...dbMembers].map(m => ({
-      ...m,
-      isOnline: onlineMap.has(m.id),
-      // updates (like current streak/avatar) could come from socket, 
-      // but mostly we trust DB for profile basics
-    }));
+    const all = [...dbMembers].map(m => {
+      const isOnline = onlineMap.has(m.id);
+      // DEBUG: Log if we found a match
+      if (isOnline) console.log(`MATCH FOUND: ${m.name} (${m.id}) is online`);
+
+      return {
+        ...m,
+        isOnline: isOnline,
+        // updates (like current streak/avatar) could come from socket, 
+        // but mostly we trust DB for profile basics
+      };
+    });
 
     // Add any guests/new users who are online but NOT in the DB member list yet
     // (e.g. just joined but API hasn't refreshed)
     participants.forEach(p => {
-      if (!all.find(m => m.id === (p.userId || p.id))) {
+      const pId = p.userId || p.id;
+      if (!all.find(m => m.id === pId)) {
+        console.log("Adding GUEST:", p.name, pId);
         all.push({
-          id: p.userId || p.id,
+          id: pId,
           name: p.name,
           avatar: p.avatar,
           isOnline: true,
@@ -283,8 +306,13 @@ export default function StudyRoomPage() {
 
   // Modified end session handler
   const handleEndSession = async () => {
+    // Save if session started and duration > 0 (checked inside saveSessionData or here)
     if (sessionStartTimeRef.current && user) {
-      await saveSessionData();
+      // Check valid duration before saving
+      const currentDuration = Math.round((new Date() - sessionStartTimeRef.current) / 1000 / 60);
+      if (currentDuration >= 1 || focusUnits > 0) {
+        await saveSessionData();
+      }
     }
     setIsRunning(false);
     setIsBreak(false);
@@ -297,10 +325,14 @@ export default function StudyRoomPage() {
   // Handle tab close or reload
   useEffect(() => {
     const handleBeforeUnload = (e) => {
-      if (!user || !sessionStartTimeRef.current || focusUnits < 1) return;
+      if (!user || !sessionStartTimeRef.current) return;
 
       const sessionEndTime = new Date();
       const sessionDuration = Math.round((sessionEndTime - sessionStartTimeRef.current) / 1000 / 60);
+
+      // Save if at least 1 minute or 1 focus unit
+      if (sessionDuration < 1 && focusUnits < 1) return;
+
       const activeSounds = sounds.filter(s => ambientVolumes[s] > 0.01);
 
       const sessionData = {
@@ -375,6 +407,13 @@ export default function StudyRoomPage() {
 
   // Modified reset timer to handle session saving
   const handleResetTimer = async () => {
+    // Save current session progress before resetting if meaningful
+    if (sessionStartTimeRef.current && user) {
+      const currentDuration = Math.round((new Date() - sessionStartTimeRef.current) / 1000 / 60);
+      if (currentDuration >= 1 || focusUnits > 0) {
+        await saveSessionData();
+      }
+    }
     resetTimer();
     sessionStartTimeRef.current = null;
   };
@@ -765,7 +804,7 @@ scrollbar-color: #059669 #065f46;
             </div>
           </div>
           <div className="flex-1 overflow-hidden relative">
-            <Chat roomId={roomId} user={userProfile} onParticipantsUpdate={setParticipants} />
+            <Chat roomId={roomId} user={chatIdentity} onParticipantsUpdate={setParticipants} />
           </div>
         </div>
       </div>

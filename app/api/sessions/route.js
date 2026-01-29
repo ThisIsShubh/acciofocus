@@ -37,6 +37,17 @@ export async function POST(req) {
       });
     }
 
+    // Ensure numeric duration
+    const duration = Number(sessionData.duration);
+    if (isNaN(duration)) {
+      return new Response(JSON.stringify({
+        error: 'Duration must be a number'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // Ensure environment object has required structure
     const environment = {
       background: sessionData.environment?.background || '',
@@ -111,7 +122,7 @@ export async function POST(req) {
 
     // --- Stats Logic ---
     // Prepare stats updates
-    const duration = Number(sessionData.duration);
+    // duration is already defined above
     const subject = sessionData.subject; // Ensure subject is clean string safe for keys? Mongoose handles dot notation but keys shouldn't have dots.
     const safeSubject = subject.replace(/\./g, '_'); // Basic sanitization
 
