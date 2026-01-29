@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import Pusher from 'pusher-js';
 import { FaPaperPlane } from 'react-icons/fa';
 
-export default function Chat({ roomId, user, onParticipantsUpdate }) {
+export default function Chat({ roomId, user, onParticipantsUpdate, onMessage }) {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [participants, setParticipants] = useState([]);
@@ -71,6 +71,7 @@ export default function Chat({ roomId, user, onParticipantsUpdate }) {
         // Chat Events
         channel.bind('message', (data) => {
             setMessages((prev) => [...prev, data]);
+            if (onMessage) onMessage(data); // Notify parent
             setTimeout(() => {
                 messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
             }, 100);
@@ -166,8 +167,8 @@ export default function Chat({ roomId, user, onParticipantsUpdate }) {
                             <div className={`max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                                 {!isMe && <span className="text-[10px] text-gray-400 ml-1 mb-0.5">{msg.user?.name}</span>}
                                 <div className={`px-4 py-2 shadow-sm relative text-sm ${isMe
-                                        ? 'bg-emerald-600 text-white rounded-2xl rounded-tr-none'
-                                        : 'bg-white text-gray-800 border border-gray-100 rounded-2xl rounded-tl-none'
+                                    ? 'bg-emerald-600 text-white rounded-2xl rounded-tr-none'
+                                    : 'bg-white text-gray-800 border border-gray-100 rounded-2xl rounded-tl-none'
                                     }`}>
                                     {msg.message}
                                     <div className={`text-[9px] mt-1 flex justify-end opacity-70 ${isMe ? 'text-emerald-100' : 'text-gray-400'}`}>

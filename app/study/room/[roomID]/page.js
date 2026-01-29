@@ -102,6 +102,14 @@ export default function StudyRoomPage() {
 
   // Chat sidebar state
   const [chatOpen, setChatOpen] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+
+  // Reset unread count when opening chat
+  useEffect(() => {
+    if (chatOpen) {
+      setUnreadMessages(0);
+    }
+  }, [chatOpen]);
 
   const {
     bg, setBg, bgTab, setBgTab
@@ -440,7 +448,7 @@ export default function StudyRoomPage() {
       <AmbientAudio audioRefs={audioRefs} />
 
       {/* --- TOP HEADER (Room Name) --- */}
-      <div className="fixed top-6 left-1/2 -translate-x-1/2 z-40">
+      <div className="fixed top-6 left-1/2 -translate-x-1/2 z-40 hidden md:block">
         <div className="bg-black/30 backdrop-blur-md border border-white/10 px-6 py-2 rounded-full flex items-center gap-3 shadow-lg">
           <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.6)]"></span>
           <h1 className="text-white font-medium tracking-wide text-sm md:text-base">
@@ -693,9 +701,9 @@ scrollbar-color: #059669 #065f46;
         </div>
       </div>
 
-      {/* --- Left Toggle Buttons --- */}
+      {/* --- Left Toggle Buttons (Timer/Bg/Mixer) --- */}
       {!menuOpen && (
-        <div className="fixed z-40 flex gap-2 left-4 top-4 flex-row md:flex-col md:gap-4 md:left-4 md:top-1/2 md:-translate-y-1/2">
+        <div className="fixed z-40 flex flex-col gap-4 left-4 top-1/2 -translate-y-1/2">
           <button
             className="bg-white/10 hover:bg-white/20 text-white/50 rounded-full p-3 shadow-lg backdrop-blur-sm flex items-center justify-center transition-all"
             onClick={() => setMenuOpen('timer')}
@@ -720,24 +728,44 @@ scrollbar-color: #059669 #065f46;
           >
             <FaMusic className="w-6 h-6" />
           </button>
-          {/* Chat Toggle Button */}
-          <button
-            className={`bg-indigo-500/80 hover:bg-indigo-500 text-white rounded-full p-3 shadow-lg backdrop-blur-sm flex items-center justify-center transition-all ${chatOpen ? 'ring-2 ring-white/50' : ''}`}
-            onClick={() => setChatOpen(!chatOpen)}
-            title="Open Chat"
-            style={{ width: 48, height: 48 }}
-          >
-            <FaComments className="w-6 h-6" />
-            {participants.length > 0 && <span className="absolute -top-1 -right-1 bg-green-500 text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-green-900">{participants.length}</span>}
-          </button>
         </div>
       )}
 
-      {/* --- Right Floating Menu (Tasks) --- */}
+      {/* Chat Button (Right Center - Bottom) */}
+      {!menuOpen && (
+        <button
+          className={`fixed right-0 z-40 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white/50 shadow-lg backdrop-blur-sm flex items-center justify-center transition-all group ${chatOpen ? 'ring-2 ring-white/50' : ''}`}
+          style={{
+            top: 'calc(50% + 65px)', // Approx 130px height / 2 + gap
+            writingMode: 'vertical-rl',
+            textOrientation: 'mixed',
+            borderTopLeftRadius: '1.5rem',
+            borderBottomLeftRadius: '1.5rem',
+            borderTopRightRadius: 0,
+            borderBottomRightRadius: 0,
+            padding: '0.75rem 0.5rem',
+            minHeight: '120px',
+            minWidth: '44px',
+            fontWeight: 700,
+            fontSize: '1rem',
+            letterSpacing: '0.1em',
+          }}
+          onClick={() => setChatOpen(!chatOpen)}
+          title="Open Chat"
+        >
+          <span className="group-hover:scale-105 transition-transform flex items-center gap-2" style={{ color: 'inherit', writingMode: 'vertical-rl' }}>
+            {unreadMessages > 0 && <span className="bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border border-red-900 animate-bounce font-bold mb-2 transform rotate-90">{unreadMessages}</span>}
+            Chat
+          </span>
+        </button>
+      )}
+
+      {/* --- Right Floating Menu (Tasks - Right Center - Top) --- */}
       {!rightMenuOpen && (
         <button
-          className="fixed top-1/2 right-0 z-40 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white/50 shadow-lg backdrop-blur-sm flex items-center justify-center transition-all group"
+          className="fixed right-0 z-40 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white/50 shadow-lg backdrop-blur-sm flex items-center justify-center transition-all group"
           style={{
+            top: 'calc(50% - 65px)', // Approx 130px height / 2 + gap
             writingMode: 'vertical-rl',
             textOrientation: 'mixed',
             borderTopLeftRadius: '1.5rem',
@@ -804,23 +832,21 @@ scrollbar-color: #059669 #065f46;
             </div>
           </div>
           <div className="flex-1 overflow-hidden relative">
-            <Chat roomId={roomId} user={chatIdentity} onParticipantsUpdate={setParticipants} />
+            <Chat
+              roomId={roomId}
+              user={chatIdentity}
+              onParticipantsUpdate={setParticipants}
+              onMessage={() => {
+                if (!chatOpen) setUnreadMessages(prev => prev + 1);
+              }}
+            />
           </div>
         </div>
       </div>
 
 
-      {/* Top Right Controls (Enhanced) */}
-      <div className="fixed top-4 right-4 z-40 flex flex-row-reverse gap-4 items-center">
-        <Link
-          href={user ? '/dashboard' : '/'}
-          className="bg-white/10 hover:bg-white/20 text-white/50 rounded-full p-3 shadow-lg backdrop-blur-sm flex items-center justify-center"
-          style={{ width: 48, height: 48 }}
-        >
-          <FaHome className="w-6 h-6" />
-        </Link>
-
-        {/* Members Toggle */}
+      {/* Top Left Controls (Members) */}
+      <div className="fixed top-4 left-4 z-40">
         <div className="relative">
           <button
             className="bg-white/10 hover:bg-white/20 text-white/50 rounded-full p-3 shadow-lg backdrop-blur-sm flex items-center justify-center transition-all"
@@ -833,7 +859,7 @@ scrollbar-color: #059669 #065f46;
 
           {/* Members Dropdown */}
           {showMembers && (
-            <div className="absolute top-14 right-0 w-72 bg-white rounded-xl shadow-2xl p-4 overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+            <div className="absolute top-14 left-0 w-72 bg-white rounded-xl shadow-2xl p-4 overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
               <h4 className="font-bold text-gray-700 mb-3 text-sm uppercase tracking-wider flex justify-between items-center">
                 Room Members
                 <span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full">{mergedMembers.length} Total</span>
@@ -864,11 +890,23 @@ scrollbar-color: #059669 #065f46;
             </div>
           )}
         </div>
+      </div>
+
+      {/* Top Right Controls (Home & Mute) */}
+      <div className="fixed top-4 right-4 z-40 flex flex-row-reverse gap-4 items-center">
+        <Link
+          href={user ? '/dashboard' : '/'}
+          className="bg-white/10 hover:bg-white/20 text-white/50 rounded-full p-3 shadow-lg backdrop-blur-sm flex items-center justify-center"
+          style={{ width: 48, height: 48 }}
+        >
+          <FaHome className="w-6 h-6" />
+        </Link>
 
         <button
           className="bg-white/10 hover:bg-white/20 text-white/40 rounded-full p-3 shadow-lg backdrop-blur-sm flex items-center justify-center"
           style={{ width: 48, height: 48 }}
           onClick={() => {
+            // ... mute logic ...
             setIsMuted(muted => {
               if (!muted) prevYoutubeVolume.current = youtubeVolume;
               if (muted && youtubeVolume === 0 && prevYoutubeVolume.current > 0) {
@@ -887,6 +925,15 @@ scrollbar-color: #059669 #065f46;
 
       {/* --- Centered Pomodoro Timer --- */}
       <div className="relative z-10 flex flex-col items-center justify-center w-full h-full">
+
+        {/* Mobile Room Name */}
+        <div className="mb-6 md:hidden flex items-center gap-2 bg-black/20 px-4 py-1.5 rounded-full border border-white/10 backdrop-blur-sm">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.6)]"></span>
+          <h1 className="text-white font-medium tracking-wide text-xs">
+            {roomDetails?.name || (roomId ? roomId.replace(/-/g, ' ') : "Loading...")}
+          </h1>
+        </div>
+
         {/* Real time */}
         <div className="mb-8 text-center">
           <div className="text-2xl text-white font-medium tracking-wider">{getFormattedTime(now)}</div>
@@ -938,7 +985,7 @@ scrollbar-color: #059669 #065f46;
         </div>
 
         {/* Status Bar */}
-        <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+        <div className="absolute bottom-4 left-0 right-0 hidden md:flex justify-center">
           <div className="flex items-center gap-6 bg-black/30 backdrop-blur-sm px-6 py-3 rounded-full">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
