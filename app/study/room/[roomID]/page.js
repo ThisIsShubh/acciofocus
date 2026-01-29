@@ -92,6 +92,7 @@ export default function StudyRoomPage() {
   const fullscreenRef = useRef(null);
   const tingRef = useRef(null);
   const sessionStartTimeRef = useRef(null);
+  const currentSessionId = useRef(null); // Track unique session ID locally
 
   const {
     menuOpen, setMenuOpen, menuRef
@@ -279,24 +280,46 @@ export default function StudyRoomPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Track session start time
+  // Track session start time and Initialize Session ID
   useEffect(() => {
-    if (isRunning && !sessionStartTimeRef.current) {
-      sessionStartTimeRef.current = new Date();
+    if (isRunning) {
+      if (!sessionStartTimeRef.current) {
+        sessionStartTimeRef.current = new Date();
+      }
+      if (!currentSessionId.current) {
+        currentSessionId.current = crypto.randomUUID();
+      }
     }
   }, [isRunning]);
 
-  // Save session data when session ends
-  const saveSessionData = async () => {
-    if (!user || !sessionStartTimeRef.current) return;
+  // HEARTBEAT: Auto-save every 5 minutes
+  useEffect(() => {
+    let heartbeatInterval;
+    if (isRunning) {
+      heartbeatInterval = setInterval(() => {
+        console.log("Saving session heartbeat...");
+        saveSessionData({ isFinal: false });
+      }, 5 * 60 * 1000); // 5 minutes
+    }
+    return () => clearInterval(heartbeatInterval);
+  }, [isRunning, user, sessionSubject, youtubeBg, bg, ambientVolumes, roomId, focusUnits]);
 
-    setIsSavingSession(true);
+
+  // Save session data
+  const saveSessionData = async ({ isFinal = false } = {}) => {
+    if (!user || !sessionStartTimeRef.current || !currentSessionId.current) return;
+
+    // Only show spinner for final save
+    if (isFinal) setIsSavingSession(true);
+
     try {
       const sessionEndTime = new Date();
       const sessionDuration = Math.round((sessionEndTime - sessionStartTimeRef.current) / 1000 / 60); // in minutes
       const activeSounds = sounds.filter(s => ambientVolumes[s] > 0.01);
 
       const sessionData = {
+        sessionId: currentSessionId.current,
+        isFinal: isFinal,
         date: sessionStartTimeRef.current,
         duration: sessionDuration,
         subject: sessionSubject,
@@ -308,6 +331,9 @@ export default function StudyRoomPage() {
           roomName: `Room: ${roomId}`
         }
       };
+
+      // Only save if meaningful duration or finalized
+      if (sessionDuration < 1 && !focusUnits && !isFinal) return;
 
       const response = await fetch('/api/sessions', {
         method: 'POST',
@@ -321,12 +347,16 @@ export default function StudyRoomPage() {
         throw new Error('Failed to save session');
       }
 
-      console.log('Session saved successfully');
-      sessionStartTimeRef.current = null;
+      console.log(`Session ${isFinal ? 'finalized' : 'heartbeat saved'} successfully`);
+
+      if (isFinal) {
+        sessionStartTimeRef.current = null;
+        currentSessionId.current = null;
+      }
     } catch (error) {
       console.error('Error saving session:', error);
     } finally {
-      setIsSavingSession(false);
+      if (isFinal) setIsSavingSession(false);
     }
   };
 
@@ -337,7 +367,10 @@ export default function StudyRoomPage() {
       // Check valid duration before saving
       const currentDuration = Math.round((new Date() - sessionStartTimeRef.current) / 1000 / 60);
       if (currentDuration >= 1 || focusUnits > 0) {
-        await saveSessionData();
+        await saveSessionData({ isFinal: true });
+      } else {
+        sessionStartTimeRef.current = null;
+        currentSessionId.current = null;
       }
     }
     setIsRunning(false);
@@ -345,23 +378,24 @@ export default function StudyRoomPage() {
     setSecondsLeft(pendingWorkDuration * 60);
     setFocusUnits(0);
     setPendingReset(false);
-    sessionStartTimeRef.current = null;
   };
 
   // Handle tab close or reload
   useEffect(() => {
     const handleBeforeUnload = (e) => {
+      // For beacon, we try to send standard logic but beacon has size limits and no async await
       if (!user || !sessionStartTimeRef.current) return;
 
       const sessionEndTime = new Date();
       const sessionDuration = Math.round((sessionEndTime - sessionStartTimeRef.current) / 1000 / 60);
 
-      // Save if at least 1 minute or 1 focus unit
       if (sessionDuration < 1 && focusUnits < 1) return;
 
       const activeSounds = sounds.filter(s => ambientVolumes[s] > 0.01);
 
       const sessionData = {
+        sessionId: currentSessionId.current,
+        isFinal: true, // Treat as final on unload
         date: sessionStartTimeRef.current,
         duration: sessionDuration,
         subject: sessionSubject,
@@ -372,10 +406,9 @@ export default function StudyRoomPage() {
           mode: "collaborative",
           roomName: `Room: ${roomId}`
         },
-        userId: user.id // You’ll need this on the API side
+        userId: user.id
       };
 
-      // Send data to a lightweight endpoint that supports beacon
       navigator.sendBeacon('/api/sessions', JSON.stringify(sessionData));
     };
 
@@ -437,11 +470,12 @@ export default function StudyRoomPage() {
     if (sessionStartTimeRef.current && user) {
       const currentDuration = Math.round((new Date() - sessionStartTimeRef.current) / 1000 / 60);
       if (currentDuration >= 1 || focusUnits > 0) {
-        await saveSessionData();
+        await saveSessionData({ isFinal: true });
       }
     }
     resetTimer();
     sessionStartTimeRef.current = null;
+    currentSessionId.current = null;
   };
 
   // If user is not loaded yet, show loading
