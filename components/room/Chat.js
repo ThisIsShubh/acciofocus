@@ -32,7 +32,7 @@ export default function Chat({ roomId, user, onParticipantsUpdate, onMessage }) 
             auth: {
                 params: {
                     username: user.name,
-                    user_id: user.id || user._id, // Ensure ID is passed
+                    user_id: user.userId || user.id || user._id, // Prioritize userId (Clerk ID)
                     avatar: user.avatar
                 }
             }
@@ -48,12 +48,14 @@ export default function Chat({ roomId, user, onParticipantsUpdate, onMessage }) 
         channel.bind('pusher:subscription_succeeded', (members) => {
             setIsConnected(true);
             const initialMembers = [];
-            members.each((member) => initialMembers.push(member.info));
+            members.each((member) => {
+                initialMembers.push({ ...member.info, id: member.id });
+            });
             setParticipants(initialMembers);
         });
 
         channel.bind('pusher:member_added', (member) => {
-            setParticipants((prev) => [...prev, member.info]);
+            setParticipants((prev) => [...prev, { ...member.info, id: member.id }]);
             setMessages((prev) => [...prev, {
                 system: true,
                 text: `${member.info.name} joined the room`
@@ -61,7 +63,7 @@ export default function Chat({ roomId, user, onParticipantsUpdate, onMessage }) 
         });
 
         channel.bind('pusher:member_removed', (member) => {
-            setParticipants((prev) => prev.filter((p) => p.name !== member.info.name)); // Using name as ID fallback if needed
+            setParticipants((prev) => prev.filter((p) => p.id !== member.id));
             setMessages((prev) => [...prev, {
                 system: true,
                 text: `${member.info.name} left the room`

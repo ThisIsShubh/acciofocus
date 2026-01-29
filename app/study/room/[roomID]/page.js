@@ -211,46 +211,64 @@ export default function StudyRoomPage() {
 
   // Merge DB members with real-time participants
   const mergedMembers = React.useMemo(() => {
-    // DEBUG LOGS
-    console.log("MERGE: dbMembers count:", dbMembers.length, dbMembers);
-    console.log("MERGE: participants count:", participants.length, participants);
+    // Helper to extract ID consistently
+    const getSafeId = (user) => {
+      if (!user) return null;
+      const rawId = user.userId || user.id || user._id;
+      return String(rawId || '').trim();
+    };
 
-    // Create a map of online users for quick lookup
-    const onlineMap = new Map(participants.map(p => [p.userId || p.id, p]));
+    const onlineIds = new Set(participants.map(p => getSafeId(p)));
+    const uniqueMembers = new Map();
 
-    // Start with DB members
-    const all = [...dbMembers].map(m => {
-      const isOnline = onlineMap.has(m.id);
-      // DEBUG: Log if we found a match
-      if (isOnline) console.log(`MATCH FOUND: ${m.name} (${m.id}) is online`);
+    // 1. Process DB Members (Deduplicate by ID)
+    dbMembers.forEach(m => {
+      const mId = getSafeId(m);
+      if (!mId) return;
 
-      return {
-        ...m,
-        isOnline: isOnline,
-        // updates (like current streak/avatar) could come from socket, 
-        // but mostly we trust DB for profile basics
-      };
+      const isOnline = onlineIds.has(mId);
+
+      // Store unique member (prefer online version if dupes exist)
+      if (!uniqueMembers.has(mId)) {
+        uniqueMembers.set(mId, {
+          ...m,
+          id: mId,
+          isOnline,
+          avatar: m.avatar || m.image || m.imageUrl
+        });
+      } else {
+        const existing = uniqueMembers.get(mId);
+        if (isOnline && !existing.isOnline) {
+          uniqueMembers.set(mId, { ...existing, isOnline: true });
+        }
+      }
     });
 
-    // Add any guests/new users who are online but NOT in the DB member list yet
-    // (e.g. just joined but API hasn't refreshed)
+    // 2. Identify Guests (Participants NOT in DB list)
     participants.forEach(p => {
-      const pId = p.userId || p.id;
-      if (!all.find(m => m.id === pId)) {
-        console.log("Adding GUEST:", p.name, pId);
-        all.push({
+      const pId = getSafeId(p);
+      if (!pId) return;
+
+      if (!uniqueMembers.has(pId)) {
+        uniqueMembers.set(pId, {
           id: pId,
-          name: p.name,
+          name: p.name || 'Anonymous',
           avatar: p.avatar,
           isOnline: true,
           isGuest: true
         });
+      } else {
+        // Ensure known user is marked online
+        const existing = uniqueMembers.get(pId);
+        if (!existing.isOnline) {
+          uniqueMembers.set(pId, { ...existing, isOnline: true });
+        }
       }
     });
 
-    // Sort: Online first, then by name
-    return all.sort((a, b) => {
-      if (a.isOnline === b.isOnline) return a.name.localeCompare(b.name);
+    // 3. Convert to array and Sort
+    return Array.from(uniqueMembers.values()).sort((a, b) => {
+      if (a.isOnline === b.isOnline) return (a.name || '').localeCompare(b.name || '');
       return a.isOnline ? -1 : 1;
     });
   }, [dbMembers, participants]);
@@ -754,7 +772,7 @@ scrollbar-color: #059669 #065f46;
           title="Open Chat"
         >
           <span className="group-hover:scale-105 transition-transform flex items-center gap-2" style={{ color: 'inherit', writingMode: 'vertical-rl' }}>
-            {unreadMessages > 0 && <span className="bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border border-red-900 animate-bounce font-bold mb-2 transform rotate-90">{unreadMessages}</span>}
+            {unreadMessages > 0 && <span className="bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border border-red-900 animate-bounce font-bold mb-2 shadow-sm" style={{ writingMode: 'horizontal-tb' }}>{unreadMessages}</span>}
             Chat
           </span>
         </button>
