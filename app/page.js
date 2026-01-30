@@ -3,13 +3,15 @@ import Link from "next/link";
 import { FaCheck, FaChartLine, FaUsers, FaHeadphones, FaClock, FaTrophy, FaLeaf, FaUserFriends, FaLock } from "react-icons/fa";
 import { IoMdRocket } from "react-icons/io";
 import Image from "next/image";
+import { auth } from "@clerk/nextjs/server";
 
-export default function Home() {
+export default async function Home() {
+  const { userId } = await auth();
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
       <Navbar />
       <main className="pt-20 pb-16 flex flex-col items-center text-center px-4">
-       {/* Hero section */}
+        {/* Hero section */}
         <section
           className="w-full h-[85vh] p-8 flex flex-col md:flex-row items-center justify-center gap-8 relative overflow-hidden rounded-2xl shadow-lg"
           style={{
@@ -28,16 +30,29 @@ export default function Home() {
               Boost your productivity with focused study rooms, solo sessions, and collaborative tools. Join a community of learners and achieve your goals together!
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-start mb-8">
-              <Link href="/signup" className="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow hover:bg-green-600 transition">
-                Get Started
-              </Link>
-              <Link href="/login" className="px-6 py-3 bg-white border border-green-600 text-green-500 rounded-lg font-semibold shadow hover:bg-green-50 transition">
-                Log In
-              </Link>
+              {userId ? (
+                <>
+                  <Link href="/dashboard" className="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow hover:bg-green-600 transition">
+                    Go to Dashboard
+                  </Link>
+                  <Link href="/study/room" className="px-6 py-3 bg-white border border-green-600 text-green-500 rounded-lg font-semibold shadow hover:bg-green-50 transition">
+                    Join a Room
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link href="/signup" className="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow hover:bg-green-600 transition">
+                    Get Started
+                  </Link>
+                  <Link href="/login" className="px-6 py-3 bg-white border border-green-600 text-green-500 rounded-lg font-semibold shadow hover:bg-green-50 transition">
+                    Log In
+                  </Link>
+                </>
+              )}
             </div>
           </div>
           <div className="w-full md:w-1/2 flex justify-center">
-         </div>
+          </div>
         </section>
 
 
@@ -66,7 +81,7 @@ export default function Home() {
           </div>
         </section>
 
-       {/* Features Section */}
+        {/* Features Section */}
         <section className="w-full py-10 px-4 max-w-7xl">
           <div className="text-left md:text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-green-500 mb-4">Supercharge Your Study Sessions</h2>
@@ -74,34 +89,34 @@ export default function Home() {
               Accio Focus provides all the tools you need to eliminate distractions and maximize productivity
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <FeatureCard 
+            <FeatureCard
               icon={<FaClock className="text-3xl text-green-300" />}
               title="Smart Pomodoro Timer"
               description="Customizable focus sessions with intelligent breaks to maintain peak concentration."
             />
-            <FeatureCard 
+            <FeatureCard
               icon={<FaChartLine className="text-3xl text-green-300" />}
               title="Progress Dashboard"
               description="Track your study habits, set goals, and visualize your learning journey."
             />
-            <FeatureCard 
+            <FeatureCard
               icon={<FaUsers className="text-3xl text-green-300" />}
               title="Study Rooms"
               description="Collaborate with friends or join public rooms to stay motivated together."
             />
-            <FeatureCard 
+            <FeatureCard
               icon={<FaHeadphones className="text-3xl text-green-300" />}
               title="Ambient Soundscapes"
               description="Choose from rain, cafe, forest, and white noise to create your perfect study environment."
             />
-            <FeatureCard 
+            <FeatureCard
               icon={<FaLock className="text-3xl text-green-300" />}
               title="Focus Mode"
               description="Temporarily block distracting websites during your study sessions."
             />
-            <FeatureCard 
+            <FeatureCard
               icon={<FaUserFriends className="text-3xl text-green-300" />}
               title="Study Buddies"
               description="Connect with friends, share progress, and keep each other accountable."
@@ -122,7 +137,7 @@ export default function Home() {
                 <li>See live timers, who&apos;s active, and what they&apos;re working on</li>
                 <li>Share goals, track progress, and cheer each other on</li>
               </ul>
-              <Link href="/login" className="inline-flex items-center gap-2 px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow hover:bg-green-600 transition text-lg">
+              <Link href={userId ? "/study/room" : "/login"} className="inline-flex items-center gap-2 px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow hover:bg-green-600 transition text-lg">
                 <FaUsers className="text-2xl" />
                 Check out Rooms
               </Link>
@@ -143,19 +158,19 @@ export default function Home() {
                 Achieve laser focus in just three simple steps
               </p>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-              <StepCard 
+              <StepCard
                 number="1"
                 title="Start Your Session"
                 description="Choose between a solo session or join/create a study room. Customize your timer, sounds, and environment."
               />
-              <StepCard 
+              <StepCard
                 number="2"
                 title="Focus & Study"
                 description="Dive into your work with our distraction-free interface. Track tasks and manage your time effectively."
               />
-              <StepCard 
+              <StepCard
                 number="3"
                 title="Track Progress"
                 description="Review your session analytics, earn achievements, and see your progress over time."
@@ -173,21 +188,21 @@ export default function Home() {
                 Join our community of focused learners
               </p>
             </div>
-            
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              <StatCard 
+              <StatCard
                 value="500K+"
                 label="Active Users"
               />
-              <StatCard 
+              <StatCard
                 value="15M+"
                 label="Study Hours"
               />
-              <StatCard 
+              <StatCard
                 value="92%"
                 label="Report Increased Focus"
               />
-              <StatCard 
+              <StatCard
                 value="4.9/5"
                 label="User Rating"
               />
@@ -252,7 +267,7 @@ export default function Home() {
           </div>
         </section> */}
 
-                {/* Testimonials */}
+        {/* Testimonials */}
         <section className="w-full py-10 px-4 max-w-7xl">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-green-500 mb-4">What Our Users Say</h2>
@@ -260,21 +275,21 @@ export default function Home() {
               Join thousands of students and professionals who have transformed their study habits
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <TestimonialCard 
+            <TestimonialCard
               name="Sarah Johnson"
               role="Medical Student"
               quote="Accio Focus helped me double my study efficiency. The Pomodoro technique combined with ambient sounds is a game-changer!"
               avatar="/avatar1.png"
             />
-            <TestimonialCard 
+            <TestimonialCard
               name="Michael Chen"
               role="Software Engineer"
               quote="The study rooms feature keeps me accountable. Studying with friends remotely has never been easier or more productive."
               avatar="/avatar2.png"
             />
-            <TestimonialCard 
+            <TestimonialCard
               name="Emma Rodriguez"
               role="Graphic Designer"
               quote="I've tried countless productivity apps, but Accio Focus is the only one that actually helped me build consistent study habits."
@@ -284,7 +299,7 @@ export default function Home() {
         </section>
 
         {/* Final CTA */}
-        <section 
+        <section
           className="w-full py-20 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl shadow-xl relative overflow-hidden"
           style={{
             backgroundImage: 'url(/3.png)',
@@ -302,9 +317,15 @@ export default function Home() {
               Join thousands of students and professionals who have found their focus with Accio Focus
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/signup" className="px-8 py-4 bg-white text-green-600 rounded-xl font-bold text-lg shadow-lg hover:bg-green-50 transition transform hover:-translate-y-1">
-                Join Now
-              </Link>
+              {userId ? (
+                <Link href="/dashboard" className="px-8 py-4 bg-white text-green-600 rounded-xl font-bold text-lg shadow-lg hover:bg-green-50 transition transform hover:-translate-y-1">
+                  Go to Dashboard
+                </Link>
+              ) : (
+                <Link href="/signup" className="px-8 py-4 bg-white text-green-600 rounded-xl font-bold text-lg shadow-lg hover:bg-green-50 transition transform hover:-translate-y-1">
+                  Join Now
+                </Link>
+              )}
               <Link href="/study/solo" className="px-8 py-4 bg-transparent border-2 border-white text-white rounded-xl font-bold text-lg hover:bg-white/10 transition">
                 Study
               </Link>
@@ -312,7 +333,7 @@ export default function Home() {
           </div>
         </section>
       </main>
-      
+
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4">
@@ -330,7 +351,7 @@ export default function Home() {
                 <SocialIcon />
               </div>
             </div>
-            
+
             <div>
               <h4 className="text-lg font-semibold mb-4">Product</h4>
               <ul className="space-y-2 text-gray-400">
@@ -341,7 +362,7 @@ export default function Home() {
                 <li><Link href="/download">Download</Link></li>
               </ul>
             </div>
-            
+
             <div>
               <h4 className="text-lg font-semibold mb-4">Resources</h4>
               <ul className="space-y-2 text-gray-400">
@@ -352,7 +373,7 @@ export default function Home() {
                 <li><Link href="/faq">FAQs</Link></li>
               </ul>
             </div>
-            
+
             <div>
               <h4 className="text-lg font-semibold mb-4">Legal</h4>
               <ul className="space-y-2 text-gray-400">
@@ -363,7 +384,7 @@ export default function Home() {
               </ul>
             </div>
           </div>
-          
+
           <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-500">
             <p>&copy; 2023 Accio Focus. All rights reserved.</p>
           </div>
@@ -430,7 +451,7 @@ const PricingCard = ({ title, price, description, features, cta, highlight }) =>
       <h3 className="text-2xl font-bold text-gray-800 mb-2">{title}</h3>
       <div className="text-4xl font-bold text-gray-900 mb-4">{price}<span className="text-lg font-normal text-gray-600">/month</span></div>
       <p className="text-gray-600 mb-6">{description}</p>
-      
+
       <ul className="space-y-3 mb-8">
         {features.map((feature, index) => (
           <li key={index} className="flex items-center">
@@ -439,7 +460,7 @@ const PricingCard = ({ title, price, description, features, cta, highlight }) =>
           </li>
         ))}
       </ul>
-      
+
       <button className={`w-full py-3 rounded-lg font-bold ${highlight ? "bg-green-500 hover:bg-green-600 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-800"}`}>
         {cta}
       </button>
